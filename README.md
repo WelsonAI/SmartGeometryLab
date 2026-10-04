@@ -14,8 +14,11 @@ This is a classroom tool, not a question-and-answer exercise site. Learners move
 - Three visible usage steps for every tool
 - Values and face numbers labelled directly on diagrams
 - Angle and rotation tools begin at 0°; angle rays support 1° adjustment
-- Solid models can be dragged directly in true 3D; face, edge and vertex cards highlight the matching parts
-- Cube nets fold one numbered face at a time into a matching draggable 3D model
+- Solid models can be dragged directly in true 3D; numbered faces, colour-coded numbered edges and numbered vertices remain identifiable while rotating
+- Cube, cuboid, pyramid and cylinder nets are available; polygonal nets keep every face connected while numbered faces fold along their shared edges
+- Symmetry offers draggable everyday shapes with a live mirror as well as the optional square-grid model
+- Triangle perimeter diagrams physically reshape when any side length changes
+- Unit-block length, width and height guides sit beside the matching rows, columns and layers
 - Lines and the compass pencil can be dragged directly on their diagrams
 - Every range control remains continuously draggable while its diagram updates
 - Responsive desktop, tablet and mobile layout
@@ -41,8 +44,11 @@ tests/smoke.mjs checks:
 - all 15 distinct tools and their Year 2–6 navigation
 - random examples and direct manipulation of solids, lines, rays, compass arms and sliders
 - 0° defaults, 1° protractor adjustment and continuous angle dragging
-- numbered five-step cube-net folding into a draggable 3D cube
-- direct labels on shapes, symmetry axes, dimensions, angles and circles
+- connected step-by-step cube, cuboid and pyramid folding into draggable 3D solids
+- direct numbered labels on 2D sides and corners, 3D faces, edges and vertices
+- draggable stamp symmetry and the square-grid alternative
+- triangle reshaping, unit-block dimension guides and full-sphere surface grids
+- compass needle/pencil alignment and a traced circle that ends at the draggable pencil tip
 - centred symmetry axes, visible perimeter labels, and line, area, volume, polygon and circle interactions
 - contextual teacher settings
 - three-language switching

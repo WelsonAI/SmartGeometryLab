@@ -264,10 +264,19 @@ select, input {
 .solid-face.feature-active { fill-opacity: .96; }
 .solid-face:not(.feature-active) { fill-opacity: .3; }
 .solid-face.selected { stroke: #ba3f45; stroke-width: 6; filter: drop-shadow(0 0 5px rgba(186,63,69,.65)); }
-.solid-face-label, .solid-vertex-label { fill: #3f2b14; font-size: 19px; font-weight: 900; paint-order: stroke; stroke: #fffdf4; stroke-width: 5px; stroke-linejoin: round; pointer-events: none; }
+.solid-face-label, .solid-vertex-label, .solid-edge-label { fill: #3f2b14; font-size: 19px; font-weight: 900; paint-order: stroke; stroke: #fffdf4; stroke-width: 5px; stroke-linejoin: round; pointer-events: none; }
 .solid-edge { stroke: #6d4a1e; stroke-width: 2.5; stroke-linecap: round; pointer-events: none; }
 .solid-edge.back-edge { opacity: .38; stroke-dasharray: 6 5; }
-.solid-edge.feature-active { stroke: #d33c49; stroke-width: 6; opacity: 1; stroke-dasharray: none; }
+.solid-edge.feature-active { stroke-width: 6; opacity: 1; stroke-dasharray: none; }
+.solid-edge.feature-active.edge-color-0 { stroke: #d33c49; }
+.solid-edge.feature-active.edge-color-1 { stroke: #0b8a72; }
+.solid-edge.feature-active.edge-color-2 { stroke: #6f55bf; }
+.solid-edge.feature-active.edge-color-3 { stroke: #cf7f10; }
+.solid-edge-label { font-size: 12px; }
+.edge-label-color-0 { fill: #a92331; }
+.edge-label-color-1 { fill: #06614f; }
+.edge-label-color-2 { fill: #513b98; }
+.edge-label-color-3 { fill: #945805; }
 .solid-vertex { fill: #e83f51; stroke: white; stroke-width: 3; }
 .solid-vertex-label { fill: #9d1628; font-size: 13px; }
 .solid-sphere { stroke: #6d4a1e; stroke-width: 4; }
@@ -275,14 +284,32 @@ select, input {
 .sphere-grid { fill: none; stroke: rgba(63,43,20,.38); stroke-width: 1.5; pointer-events: none; }
 .solid-drag-hint { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); padding: 6px 12px; border: 2px solid #0d806b; border-radius: 999px; background: rgba(255,255,255,.93); color: #075f4e; font-size: 13px; font-weight: 900; white-space: nowrap; pointer-events: none; }
 
+/* Planar features */
+.planar-edge { stroke-width: 9; stroke-linecap: round; }
+.planar-edge.edge-color-0 { stroke: #d33c49; }
+.planar-edge.edge-color-1 { stroke: #0b8a72; }
+.planar-edge.edge-color-2 { stroke: #6f55bf; }
+.planar-edge.edge-color-3 { stroke: #cf7f10; }
+.planar-edge-label, .planar-vertex-label { fill: #3f2b14; font-size: 14px; font-weight: 900; paint-order: stroke; stroke: #fff; stroke-width: 5px; }
+.planar-vertex { fill: #e83f51; stroke: #fff; stroke-width: 4; }
+.planar-vertex-label { fill: #9d1628; }
+.planar-curve { fill: none; stroke: transparent; stroke-width: 9; }
+.planar-curve.active { stroke: #0b8a72; }
+.planar-feature-label { font-size: 15px; }
+
 /* Nets */
 .net-board { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 20px; width: min(720px, 100%); }
 .net-panel { display: grid; place-items: center; min-height: 255px; padding: 12px; border: 2px dashed #d4b67d; border-radius: 18px; background: rgba(255,255,255,.75); }
-.net-square { fill: #ffd778; stroke: #6d4a1e; stroke-width: 3; transition: all .3s ease; }
-.net-square.base { fill: #b9eadf; }
-.net-square.current { fill: #ffb8a8; stroke: #ba3f45; stroke-width: 5; }
-.net-square.folded { fill: #dff3ec; opacity: .38; stroke-dasharray: 6 4; }
-.net-square.folded.current { fill: #ffb8a8; opacity: 1; stroke: #ba3f45; stroke-width: 5; stroke-dasharray: none; }
+.net-piece { fill: #ffd778; stroke: #6d4a1e; stroke-width: 3; transition: all .3s ease; }
+.net-piece.base { fill: #b9eadf; }
+.net-piece.current { fill: #ffb8a8; stroke: #ba3f45; stroke-width: 5; }
+.net-piece.folded { fill: #dff3ec; opacity: .38; stroke-dasharray: 6 4; }
+.net-piece.folded.current { fill: #ffb8a8; opacity: 1; stroke: #ba3f45; stroke-width: 5; stroke-dasharray: none; }
+.net-face-number { pointer-events: none; }
+.net-flat-svg { min-height: 260px; }
+.net-fold-svg { min-height: 260px; }
+.net-fold-svg .solid-face { fill-opacity: 1; }
+.folding-face-group.active .solid-face { stroke: #ba3f45; stroke-width: 6; filter: drop-shadow(0 0 5px rgba(186,63,69,.5)); }
 .panel-caption { align-self: start; min-width: 150px; padding: 5px 10px; border-radius: 10px; background: #fff4ce; color: #76501d; text-align: center; font-size: 14px; font-weight: 900; }
 .cube-assembly { min-height: 240px; }
 .cube-face { stroke: #6d4a1e; stroke-width: 3; stroke-linejoin: round; }
@@ -324,6 +351,17 @@ select, input {
 .mirror-cell.mirrored { border-color: #6953aa; background: #a993e7; }
 .symmetry-legend { display: grid; gap: 10px; }
 .legend-chip { padding: 9px 12px; border-radius: 11px; background: white; box-shadow: 0 2px 8px rgba(80,55,20,.08); }
+.symmetry-canvas-wrap { position: relative; display: grid; justify-items: center; gap: 8px; width: min(760px, 100%); padding-top: 34px; }
+.symmetry-canvas { width: 100%; max-height: 370px; border: 2px solid #9f8150; border-radius: 16px; background: #fff; }
+.symmetry-half.left-half { fill: #effaf6; }
+.symmetry-half.right-half { fill: #f5f1ff; }
+.symmetry-axis-line { stroke: #ba3f45; stroke-width: 5; }
+.symmetry-stamp { stroke: #075f4e; stroke-width: 3; cursor: grab; filter: drop-shadow(0 2px 2px rgba(63,43,20,.18)); }
+.symmetry-stamp:active { cursor: grabbing; }
+.source-stamp { fill: #48b89f; }
+.mirror-stamp { fill: #a993e7; stroke: #60489e; pointer-events: none; }
+.symmetry-distance-note { padding: 7px 14px; border-radius: 999px; background: #fff5d2; color: #76501d; font-weight: 900; }
+.symmetry-palette { margin-top: 10px; }
 
 /* Angles and lines */
 .angle-readout { display: grid; place-items: center; min-width: 150px; padding: 10px 16px; border: 2px solid var(--green-2); border-radius: 16px; background: var(--mint); }
@@ -349,16 +387,37 @@ select, input {
 .iso-top { fill: #ffe39b; stroke: #7a5829; stroke-width: 1.5; }
 .iso-left { fill: #83caba; stroke: #7a5829; stroke-width: 1.5; }
 .iso-right { fill: #55aa98; stroke: #7a5829; stroke-width: 1.5; }
+.block-dimension line { stroke-width: 5; stroke-linecap: round; }
+.block-dimension circle { stroke: white; stroke-width: 2; }
+.block-dimension text { font-size: 14px; font-weight: 900; paint-order: stroke; stroke: white; stroke-width: 5px; }
+.length-guide line, .length-guide circle { stroke: #0b8a72; fill: #0b8a72; }
+.length-guide text { fill: #075f4e; }
+.width-guide line, .width-guide circle { stroke: #6f55bf; fill: #6f55bf; }
+.width-guide text { fill: #513b98; }
+.height-guide line, .height-guide circle { stroke: #d33c49; fill: #d33c49; }
+.height-guide text { fill: #a92331; }
+.volume-svg { min-height: 330px; }
 
 /* Circle */
 .compass-arm { stroke: #4c5961; stroke-width: 8; stroke-linecap: round; }
 .compass-pencil { stroke: #ba3f45; stroke-width: 7; stroke-linecap: round; }
-.circle-main { fill: rgba(255,215,120,.22); stroke: #0d806b; stroke-width: 5; }
+.circle-guide { fill: rgba(255,215,120,.16); stroke: #9f8150; stroke-width: 2; stroke-dasharray: 7 6; }
+.circle-main { fill: none; stroke: #0d806b; stroke-width: 5; }
 .radius-line { stroke: #ba3f45; stroke-width: 4; }
 .diameter-line { stroke: #8062c6; stroke-width: 4; stroke-dasharray: 8 5; }
+.compass-hinge { fill: #ffbd3f; stroke: #6d4a1e; stroke-width: 3; }
+.compass-needle { fill: #3f2b14; stroke: white; stroke-width: 2; }
 .circle-drag-handle { fill: #e84350; stroke: white; stroke-width: 4; cursor: grab; filter: drop-shadow(0 2px 4px rgba(63,43,20,.4)); }
 .circle-drag-handle:active { cursor: grabbing; }
-.centre-label { fill: #6d4a1e !important; font-size: 13px; }
+.centre-label, .pencil-label { fill: #6d4a1e !important; font-size: 12px; }
+.pencil-label { fill: #9d1628 !important; }
+.circle-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; width: min(680px, 100%); padding: 9px 12px; border-radius: 13px; background: #fffaf0; font-size: 14px; font-weight: 800; }
+.circle-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+.legend-dot.needle { background: #3f2b14; }
+.legend-dot.pencil { background: #e84350; }
+.legend-line.traced { width: 22px; border-top: 4px solid #0d806b; }
+.perimeter-triangle { transition: points .2s ease; }
 .perimeter-svg { min-height: 320px; overflow: visible; }
 
 /* Dialog and footer */

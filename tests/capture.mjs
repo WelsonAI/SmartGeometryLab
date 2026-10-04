@@ -50,10 +50,15 @@ async function capture({ width, height, grade, mode, activity, lang, output, aft
 await send("Page.enable");
 await send("Runtime.enable");
 await capture({ width: 1440, height: 1000, grade: 2, mode: "shape", activity: "shapeExplorer", lang: "zh", output: "review-shape-3d-desktop.png", after: "(() => { document.querySelector(\"[data-property='1']\").click(); })()" });
+await capture({ width: 1440, height: 1000, grade: 2, mode: "shape", activity: "shapeExplorer", lang: "zh", output: "review-shape-2d-desktop.png", after: "(() => { document.querySelector('[data-shape=square]').click(); })()" });
+await capture({ width: 1440, height: 1000, grade: 2, mode: "shape", activity: "shapeExplorer", lang: "zh", output: "review-sphere-desktop.png", after: "(() => { document.querySelector('[data-shape=sphere]').click(); })()" });
+await capture({ width: 1440, height: 1000, grade: 2, mode: "shape", activity: "netBuilder", lang: "zh", output: "review-net-step1-desktop.png", after: "(() => { document.getElementById('nextFold').click(); })()" });
 await capture({ width: 1440, height: 1000, grade: 2, mode: "shape", activity: "netBuilder", lang: "zh", output: "review-net-3d-desktop.png", after: "(() => { for(let i=0;i<5;i++) document.getElementById('nextFold').click(); })()" });
+await capture({ width: 1440, height: 1000, grade: 2, mode: "shape", activity: "netBuilder", lang: "zh", output: "review-pyramid-net-desktop.png", after: "(() => { document.querySelector('[data-net-shape=pyramid]').click(); document.getElementById('nextFold').click(); document.getElementById('nextFold').click(); })()" });
 await capture({ width: 1440, height: 1000, grade: 3, mode: "shape", activity: "symmetryLab", lang: "zh", output: "review-symmetry-desktop.png" });
 await capture({ width: 1440, height: 1000, grade: 4, mode: "line", activity: "lineLab", lang: "zh", output: "review-line-drag-desktop.png", after: "(() => { state.tool.angleA=25; state.tool.angleB=108; renderTool(); })()" });
-await capture({ width: 1440, height: 1000, grade: 4, mode: "measure", activity: "perimeterLab", lang: "zh", output: "review-perimeter-desktop.png", after: "(() => { document.querySelector('[data-per-shape=square]').click(); })()" });
+await capture({ width: 1440, height: 1000, grade: 4, mode: "measure", activity: "perimeterLab", lang: "zh", output: "review-perimeter-desktop.png", after: "(() => { document.querySelector('[data-per-shape=triangle]').click(); const a=document.getElementById('perA'); a.value='11'; a.dispatchEvent(new Event('input',{bubbles:true})); })()" });
+await capture({ width: 1440, height: 1000, grade: 4, mode: "measure", activity: "volumeLab", lang: "zh", output: "review-volume-desktop.png" });
 await capture({ width: 1440, height: 1000, grade: 6, mode: "shape", activity: "circleLab", lang: "zh", output: "review-circle-desktop.png", after: "(() => { state.tool.draw=315; renderTool(); })()" });
 await capture({ width: 390, height: 844, grade: 2, mode: "shape", activity: "shapeExplorer", lang: "zh", output: "review-shape-3d-mobile.png" });
 await capture({ width: 390, height: 844, grade: 3, mode: "shape", activity: "symmetryLab", lang: "zh", output: "review-symmetry-mobile.png" });
