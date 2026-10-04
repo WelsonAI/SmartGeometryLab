@@ -122,7 +122,12 @@ const interactions = await evaluate(`(() => {
   window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:21,...drawStart}));
   const draw={closed:state.tool.closed,points:state.tool.points.length,edgeLabels:document.querySelectorAll(".draw-edge-label").length};
   document.getElementById("toggleDrawSolid").click();
-  Object.assign(draw,{solid:state.tool.solid,solidFaces:document.querySelectorAll("#drawnSolid3d .solid-face").length,solidLabels:document.querySelectorAll("#drawnSolid3d .solid-face-label").length,viewY:state.tool.viewY,overflow:document.documentElement.scrollWidth-window.innerWidth});
+  Object.assign(draw,{solid:state.tool.solid,solidFaces:document.querySelectorAll("#drawnSolid3d .solid-face").length,solidLabels:document.querySelectorAll("#drawnSolid3d .solid-face-label").length,featureButtons:document.querySelectorAll("[data-solid-property]").length,viewY:state.tool.viewY,overflow:document.documentElement.scrollWidth-window.innerWidth});
+  document.querySelector("[data-solid-property='1']").click();
+  Object.assign(draw,{edgeProperty:state.tool.property,highlightedEdges:document.querySelectorAll("#drawnSolid3d .solid-edge.feature-active").length,solidEdgeLabels:document.querySelectorAll("#drawnSolid3d .solid-edge-label").length});
+  document.querySelector("[data-solid-property='2']").click();
+  Object.assign(draw,{vertexProperty:state.tool.property,highlightedVertices:document.querySelectorAll("#drawnSolid3d .solid-vertex").length,vertexLabels:[...document.querySelectorAll("#drawnSolid3d .solid-vertex-label")].map(node=>node.textContent).join(",")});
+  document.querySelector("[data-solid-property='0']").click();
   const drawnSolid=document.getElementById("drawnSolid3d");
   const faceBeforeZoom=drawnSolid.querySelector(".solid-face")?.getAttribute("points");
   document.querySelector("[data-solid-zoom=in]").click();
@@ -132,7 +137,11 @@ const interactions = await evaluate(`(() => {
   document.querySelector("[data-solid-zoom=reset]").click();
   draw.zoomReset=state.tool.zoom;
   drawnSolid.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:22,clientX:170,clientY:120}));
-  drawnSolid.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:22,clientX:230,clientY:145}));
+  draw.followAngles=[];
+  for(const x of [190,210,230]){
+    drawnSolid.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:22,clientX:x,clientY:145}));
+    draw.followAngles.push(state.tool.viewY);
+  }
   drawnSolid.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:22,clientX:230,clientY:145}));
   draw.draggedViewY=state.tool.viewY;
 
@@ -143,6 +152,9 @@ const interactions = await evaluate(`(() => {
   prismSvg.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:23,clientX:235,clientY:150}));
   prismSvg.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:23,clientX:235,clientY:150}));
   prism.draggedViewY=state.tool.viewY;
+  document.querySelector("[data-solid-property='2']").click();
+  prism.vertices=document.querySelectorAll("#prismSolid3d .solid-vertex").length;
+  document.querySelector("[data-solid-property='0']").click();
   const prismSides=document.getElementById("prismSides");
   prismSides.value="5";
   prismSides.dispatchEvent(new Event("input",{bubbles:true}));
@@ -179,8 +191,10 @@ const interactions = await evaluate(`(() => {
   net.numbers=[...document.querySelectorAll("#netFold3d .solid-face-label")].map(node=>node.textContent).sort().join(",");
   net.viewY=state.tool.viewY;
   const netSvg=document.getElementById("netFold3d");
+  const netFaceBefore=netSvg.querySelector(".solid-face")?.getAttribute("points");
   netSvg.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:12,clientX:180,clientY:130}));
   window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:12,clientX:230,clientY:140}));
+  net.directFollow=document.getElementById("netFold3d")===netSvg&&netSvg.querySelector(".solid-face")?.getAttribute("points")!==netFaceBefore;
   window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:12,clientX:230,clientY:140}));
   net.draggedViewY=state.tool.viewY;
   net.summary=document.getElementById("liveSummary").textContent;
@@ -200,10 +214,12 @@ const interactions = await evaluate(`(() => {
   choose(3,"shape","symmetryLab");
   const symmetry={source:document.querySelectorAll(".source-stamp").length,mirrors:document.querySelectorAll(".mirror-stamp").length,beforeX:state.tool.stamps[0].x};
   const stamp=document.querySelector(".source-stamp");
+  const stampTransform=stamp.getAttribute("transform");
   const symmetryCanvas=document.getElementById("symmetryCanvas");
   const stampRect=symmetryCanvas.getBoundingClientRect();
   stamp.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:13,clientX:stampRect.left+80,clientY:stampRect.top+80}));
   window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:13,clientX:stampRect.left+stampRect.width*.36,clientY:stampRect.top+stampRect.height*.62}));
+  symmetry.directFollow=document.querySelector(".source-stamp")===stamp&&stamp.getAttribute("transform")!==stampTransform;
   window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:13,clientX:stampRect.left+stampRect.width*.36,clientY:stampRect.top+stampRect.height*.62}));
   symmetry.afterX=state.tool.stamps[0].x;
   symmetry.mirrorX=600-state.tool.stamps[0].x;
@@ -228,8 +244,10 @@ const interactions = await evaluate(`(() => {
   const wanted=37*Math.PI/180;
   const clientX=rect.left+(250+Math.cos(wanted)*155)/500*rect.width;
   const clientY=rect.top+(225-Math.sin(wanted)*155)/260*rect.height;
+  const rayBefore=document.getElementById("movingRay").getAttribute("x2");
   handle.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,clientX:rect.left+rect.width*.81,clientY:rect.top+rect.height*.865}));
   window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,clientX,clientY}));
+  angle.directFollow=document.getElementById("angleBoard")===board&&document.getElementById("movingRay").getAttribute("x2")!==rayBefore;
   window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,clientX,clientY}));
   angle.dragValue=state.tool.angle;
   angle.diagram=document.querySelector(".angle-value-label")?.textContent;
@@ -243,8 +261,10 @@ const interactions = await evaluate(`(() => {
   const lineWanted=33*Math.PI/180;
   const lineX=lineRect.left+(320+Math.cos(lineWanted)*230)/640*lineRect.width;
   const lineY=lineRect.top+(150-Math.sin(lineWanted)*230)/300*lineRect.height;
+  const lineHandleBefore=lineHandle.getAttribute("cx");
   lineHandle.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,clientX:lineRect.right-30,clientY:lineRect.top+lineRect.height/2}));
   window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,clientX:lineX,clientY:lineY}));
+  lineDefaults.directFollow=document.getElementById("lineBoard")===lineBoard&&document.querySelector("[data-line-handle='A']").getAttribute("cx")!==lineHandleBefore;
   window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,clientX:lineX,clientY:lineY}));
   lineDefaults.draggedA=state.tool.angleA;
   document.getElementById("snapPerpendicular").click();
@@ -303,10 +323,12 @@ const interactions = await evaluate(`(() => {
   const circleWanted=315*Math.PI/180;
   const circleX=circleRect.left+(260+Math.cos(circleWanted)*70)/520*circleRect.width;
   const circleY=circleRect.top+(155+Math.sin(circleWanted)*70)/315*circleRect.height;
+  const circleHandleBefore=circleHandle.getAttribute("cx");
   circleHandle.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,clientX:circleRect.left+circleRect.width*.5,clientY:circleRect.top+circleRect.height*.5}));
   window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,clientX:circleX,clientY:circleY}));
+  const circleDirectFollow=document.getElementById("circleBoard")===circleBoard&&document.getElementById("circleDragHandle").getAttribute("cx")!==circleHandleBefore;
   window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,clientX:circleX,clientY:circleY}));
-  const circle={defaultDraw:circleDefault,radius:state.tool.radius,draggedDraw:state.tool.draw,step:document.getElementById("circleDraw").step,summary:document.getElementById("liveSummary").textContent,labels:[...document.querySelectorAll(".circle-wrap .diagram-label")].map(node=>node.textContent).join("|"),centre:document.querySelector(".centre-label")?.textContent};
+  const circle={defaultDraw:circleDefault,radius:state.tool.radius,draggedDraw:state.tool.draw,directFollow:circleDirectFollow,step:document.getElementById("circleDraw").step,summary:document.getElementById("liveSummary").textContent,labels:[...document.querySelectorAll(".circle-wrap .diagram-label")].map(node=>node.textContent).join("|"),centre:document.querySelector(".centre-label")?.textContent};
 
   choose(5,"measure","compositeArea");
   document.getElementById("compWidth").value="12";
@@ -335,19 +357,19 @@ const interactions = await evaluate(`(() => {
   return {draw,prism,shapeDefaults,net,symmetry,angle,perpendicular,triangleShape,perimeter,area,volume,polygon,circle,composite,teacher,ranges,zh};
 })()`);
 
-if (!interactions.draw.closed || interactions.draw.points !== 4 || interactions.draw.edgeLabels !== 4 || !interactions.draw.solid || interactions.draw.solidFaces !== 6 || interactions.draw.solidLabels !== 6 || interactions.draw.zoom !== 1.2 || interactions.draw.zoomLabel !== "120%" || !interactions.draw.zoomChanged || interactions.draw.wheelZoom !== 1.3 || interactions.draw.zoomReset !== 1 || interactions.draw.draggedViewY === interactions.draw.viewY || interactions.draw.overflow > 1) throw new Error("Flexible 2D-to-3D drawing board failed: " + JSON.stringify(interactions.draw));
-if (interactions.prism.faces !== 5 || interactions.prism.labels !== 5 || interactions.prism.draggedViewY === interactions.prism.viewY || interactions.prism.sides !== 5 || interactions.prism.fiveFaces !== 7 || interactions.prism.fiveEdges !== 15 || interactions.prism.overflow > 1) throw new Error("Draggable 3D prism failed: " + JSON.stringify(interactions.prism));
+if (!interactions.draw.closed || interactions.draw.points !== 4 || interactions.draw.edgeLabels !== 4 || !interactions.draw.solid || interactions.draw.solidFaces !== 6 || interactions.draw.solidLabels !== 6 || interactions.draw.featureButtons !== 3 || interactions.draw.edgeProperty !== 1 || interactions.draw.highlightedEdges !== 12 || interactions.draw.solidEdgeLabels !== 12 || interactions.draw.vertexProperty !== 2 || interactions.draw.highlightedVertices !== 8 || interactions.draw.vertexLabels !== "A1,A2,A3,A4,B1,B2,B3,B4" || interactions.draw.zoom !== 1.2 || interactions.draw.zoomLabel !== "120%" || !interactions.draw.zoomChanged || interactions.draw.wheelZoom !== 1.3 || interactions.draw.zoomReset !== 1 || interactions.draw.followAngles.join(",") !== "49,68,87" || interactions.draw.draggedViewY === interactions.draw.viewY || interactions.draw.overflow > 1) throw new Error("Flexible 2D-to-3D drawing board failed: " + JSON.stringify(interactions.draw));
+if (interactions.prism.faces !== 5 || interactions.prism.labels !== 5 || interactions.prism.draggedViewY === interactions.prism.viewY || interactions.prism.vertices !== 6 || interactions.prism.sides !== 5 || interactions.prism.fiveFaces !== 7 || interactions.prism.fiveEdges !== 15 || interactions.prism.overflow > 1) throw new Error("Draggable 3D prism failed: " + JSON.stringify(interactions.prism));
 if (interactions.shapeDefaults.rotation !== 0 || interactions.shapeDefaults.faces !== 6 || interactions.shapeDefaults.faceLabels !== 6 || interactions.shapeDefaults.draggedViewY === interactions.shapeDefaults.viewY || interactions.shapeDefaults.highlightedEdges !== 12 || interactions.shapeDefaults.highlightedVertices !== 8 || interactions.shapeDefaults.pyramidLabels !== 5 || interactions.shapeDefaults.sphereGrid < 10 || interactions.shapeDefaults.planarEdges !== 4 || interactions.shapeDefaults.planarEdgeLabels !== "1,2,3,4" || interactions.shapeDefaults.planarVertices !== 4) throw new Error("Interactive shape explorer failed: " + JSON.stringify(interactions.shapeDefaults));
-if (interactions.net.initialStep !== 0 || interactions.net.baseNumber !== "1" || interactions.net.firstFoldNumber !== "3" || interactions.net.shapeChoices !== 4 || interactions.net.steps.map(item=>item.faces).join(",") !== "6,6,6,6,6" || interactions.net.steps.some(item=>item.active !== 1) || interactions.net.numbers !== "1,2,3,4,5,6" || interactions.net.draggedViewY === interactions.net.viewY || !interactions.net.summary.includes("6") || interactions.net.pyramidFaces !== 5 || interactions.net.pyramidMax !== "4" || interactions.net.cylinderFlatPieces !== 3 || interactions.net.cylinderLabels !== 3 || interactions.net.cuboidBaseNumber !== "1" || interactions.net.cuboidFaces !== 6) throw new Error("Step-by-step connected net failed: " + JSON.stringify(interactions.net));
-if (interactions.symmetry.source !== interactions.symmetry.mirrors || interactions.symmetry.source < 1 || interactions.symmetry.beforeX === interactions.symmetry.afterX || Math.abs(interactions.symmetry.afterX + interactions.symmetry.mirrorX - 600) > .01 || interactions.symmetry.before === interactions.symmetry.after || interactions.symmetry.gridMirrors < 1 || !interactions.symmetry.axis || interactions.symmetry.axisOffset > 2) throw new Error("Symmetry board failed: " + JSON.stringify(interactions.symmetry));
-if (interactions.angle.initial !== 0 || interactions.angle.step !== "1" || interactions.angle.oneDegree !== 1 || interactions.angle.dragValue !== 37 || interactions.angle.diagram !== "37°" || !interactions.angle.summary.includes("37")) throw new Error("Angle lab failed: " + JSON.stringify(interactions.angle));
-if (interactions.perpendicular.a !== 0 || interactions.perpendicular.b !== 0 || interactions.perpendicular.draggedA !== 33 || interactions.perpendicular.difference !== 90 || interactions.perpendicular.labels < 2) throw new Error("Line lab failed: " + JSON.stringify(interactions.perpendicular));
+if (interactions.net.initialStep !== 0 || interactions.net.baseNumber !== "1" || interactions.net.firstFoldNumber !== "3" || interactions.net.shapeChoices !== 4 || interactions.net.steps.map(item=>item.faces).join(",") !== "6,6,6,6,6" || interactions.net.steps.some(item=>item.active !== 1) || interactions.net.numbers !== "1,2,3,4,5,6" || !interactions.net.directFollow || interactions.net.draggedViewY === interactions.net.viewY || !interactions.net.summary.includes("6") || interactions.net.pyramidFaces !== 5 || interactions.net.pyramidMax !== "4" || interactions.net.cylinderFlatPieces !== 3 || interactions.net.cylinderLabels !== 3 || interactions.net.cuboidBaseNumber !== "1" || interactions.net.cuboidFaces !== 6) throw new Error("Step-by-step connected net failed: " + JSON.stringify(interactions.net));
+if (interactions.symmetry.source !== interactions.symmetry.mirrors || interactions.symmetry.source < 1 || !interactions.symmetry.directFollow || interactions.symmetry.beforeX === interactions.symmetry.afterX || Math.abs(interactions.symmetry.afterX + interactions.symmetry.mirrorX - 600) > .01 || interactions.symmetry.before === interactions.symmetry.after || interactions.symmetry.gridMirrors < 1 || !interactions.symmetry.axis || interactions.symmetry.axisOffset > 2) throw new Error("Symmetry board failed: " + JSON.stringify(interactions.symmetry));
+if (interactions.angle.initial !== 0 || interactions.angle.step !== "1" || interactions.angle.oneDegree !== 1 || interactions.angle.dragValue !== 37 || !interactions.angle.directFollow || interactions.angle.diagram !== "37°" || !interactions.angle.summary.includes("37")) throw new Error("Angle lab failed: " + JSON.stringify(interactions.angle));
+if (interactions.perpendicular.a !== 0 || interactions.perpendicular.b !== 0 || interactions.perpendicular.draggedA !== 33 || !interactions.perpendicular.directFollow || interactions.perpendicular.difference !== 90 || interactions.perpendicular.labels < 2) throw new Error("Line lab failed: " + JSON.stringify(interactions.perpendicular));
 if (interactions.triangleShape.a !== 11 || interactions.triangleShape.before === interactions.triangleShape.after) throw new Error("Triangle did not reshape with its side lengths: " + JSON.stringify(interactions.triangleShape));
 if (interactions.perimeter.labels !== 4 || !interactions.perimeter.allVisible) throw new Error("Perimeter labels are clipped: " + JSON.stringify(interactions.perimeter));
 if (interactions.area.shape !== "triangle" || !interactions.area.summary.includes("20") || interactions.area.squareWidth !== 12 || interactions.area.squareHeight !== 12 || !interactions.area.squareInside || interactions.area.rectangleHeight !== 8 || interactions.area.heightMax !== "8") throw new Error("Area board failed: " + JSON.stringify(interactions.area));
 if (interactions.volume.cubes !== 30 || interactions.volume.dimensions !== 3 || !interactions.volume.labels.includes("5") || !interactions.volume.summary.includes("30") || !interactions.volume.lowerBeforeUpper || interactions.volume.upperBlocks !== 15 || !interactions.volume.upperSorted) throw new Error("Volume board failed: " + JSON.stringify(interactions.volume));
 if (interactions.polygon.sides !== 8 || !interactions.polygon.summary.includes("1080")) throw new Error("Polygon lab failed.");
-if (interactions.circle.defaultDraw !== 0 || interactions.circle.radius !== 70 || interactions.circle.draggedDraw !== 315 || interactions.circle.step !== "1" || !interactions.circle.summary.includes("140") || !interactions.circle.labels.includes("r = 70") || !interactions.circle.labels.includes("d = 140") || !interactions.circle.centre.includes("O")) throw new Error("Circle lab failed: " + JSON.stringify(interactions.circle));
+if (interactions.circle.defaultDraw !== 0 || interactions.circle.radius !== 70 || interactions.circle.draggedDraw !== 315 || !interactions.circle.directFollow || interactions.circle.step !== "1" || !interactions.circle.summary.includes("140") || !interactions.circle.labels.includes("r = 70") || !interactions.circle.labels.includes("d = 140") || !interactions.circle.centre.includes("O")) throw new Error("Circle lab failed: " + JSON.stringify(interactions.circle));
 if (interactions.composite.outer !== 12 || interactions.composite.cut !== 11 || interactions.composite.cutMax !== "11") throw new Error("Composite cut-out width 11 failed: " + JSON.stringify(interactions.composite));
 if (interactions.teacher.open || interactions.teacher.width !== 10) throw new Error("Teacher settings failed.");
 if (interactions.ranges.cursor !== "ew-resize" || interactions.ranges.touchAction !== "none" || interactions.ranges.afterDown !== 7 || interactions.ranges.afterMove !== 11) throw new Error("Range controls are not freely draggable: " + JSON.stringify(interactions.ranges));

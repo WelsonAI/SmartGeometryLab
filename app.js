@@ -152,7 +152,7 @@ const GUIDES = {
   shapeDrawer: [
     ml("Klik titik satu demi satu atau tahan dan seret merentasi titik.", "逐点点击，或按住并拖过多个格点。", "Click points one by one, or hold and drag across them."),
     ml("Tekan Tutup bentuk.", "点击“闭合图形”。", "Press Close shape."),
-    ml("Tekan Sambung jadi 3D, kemudian seret model untuk memutarnya.", "点击“连接成立体”，再拖动模型旋转查看。", "Press Connect as 3D, then drag the model to rotate it.")
+    ml("Tekan Sambung jadi 3D, pilih muka, rusuk atau bucu, kemudian seret model.", "点击“连接成立体”，选择面、棱或顶点，再拖动模型查看。", "Press Connect as 3D, choose faces, edges or vertices, then drag the model.")
   ],
   prismLab: [
     ml("Ubah bilangan sisi tapak.", "改变底面的边数。", "Change the base sides."),
@@ -285,6 +285,7 @@ const loc = value => typeof value === "string" ? value : value[state.lang];
 const tr = key => loc(I18N[key]);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
 const gradeName = n => state.lang === "ms" ? "Tahun " + n : state.lang === "zh" ? n + "年级" : "Year " + n;
 
 function beep(kind = "tap") {
@@ -358,11 +359,15 @@ function metric(label, value, active = false) {
   return "<div class=\"metric" + (active ? " active" : "") + "\"><span>" + label + "</span><strong>" + value + "</strong></div>";
 }
 
+function featureMetric(label, value, property, active) {
+  return "<button type=\"button\" class=\"metric metric-button" + (active ? " active" : "") + "\" data-solid-property=\"" + property + "\" aria-pressed=\"" + active + "\"><span>" + label + "</span><strong>" + value + "</strong></button>";
+}
+
 const factories = {
   shapeExplorer: () => ({ shape: "cube", rotation: 0, property: 0, viewX: -18, viewY: 30, selectedFace: null }),
   netBuilder: () => ({ shape: "cube", net: 0, step: 0, viewX: -18, viewY: 30 }),
-  shapeDrawer: () => ({ points: [], closed: false, corners: 4, solid: false, depth: 58, viewX: -18, viewY: 30 }),
-  prismLab: () => ({ sides: 3, depth: 64, viewX: -18, viewY: 30 }),
+  shapeDrawer: () => ({ points: [], closed: false, corners: 4, solid: false, depth: 58, property: 0, viewX: -18, viewY: 30 }),
+  prismLab: () => ({ sides: 3, depth: 64, property: 0, viewX: -18, viewY: 30 }),
   symmetryLab: () => ({ mode: "stamps", cells: ["1,1","2,2","3,1","4,3"], stamp: "star", randomCount: 4, stamps: [{ id: 1, type: "star", x: 105, y: 82 }, { id: 2, type: "circle", x: 176, y: 166 }, { id: 3, type: "triangle", x: 88, y: 238 }] }),
   patternLab: () => ({ seed: ["circle","triangle"], repeats: 3 }),
   angleLab: () => ({ angle: 0, target: state.grade === 6 ? 50 : null }),
@@ -690,11 +695,14 @@ function solidSvgContent(shape, t, options = {}) {
     const edgeNumber = shape.id === "cylinder" ? index % 2 : shape.id === "cone" ? 0 : index;
     const showNumber = property === 1 && (shape.id === "cylinder" ? index < 2 : shape.id === "cone" ? index === 0 : true);
     const middle = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-    return "<g><line class=\"solid-edge edge-color-" + (edgeNumber % 4) + (property === 1 ? " feature-active" : "") + (depth < -.35 ? " back-edge" : "") + "\" x1=\"" + a[0].toFixed(1) + "\" y1=\"" + a[1].toFixed(1) + "\" x2=\"" + b[0].toFixed(1) + "\" y2=\"" + b[1].toFixed(1) + "\"/>" + (showNumber ? "<text class=\"solid-edge-label edge-label-color-" + (edgeNumber % 4) + "\" x=\"" + middle[0].toFixed(1) + "\" y=\"" + (middle[1] - 5).toFixed(1) + "\" text-anchor=\"middle\">" + (edgeNumber + 1) + "</text>" : "") + "</g>";
+    const edgeLabelClass = options.edgeLabelClass ? " " + options.edgeLabelClass(edgeNumber, model) : "";
+    return "<g><line class=\"solid-edge edge-color-" + (edgeNumber % 4) + (property === 1 ? " feature-active" : "") + (depth < -.35 ? " back-edge" : "") + "\" x1=\"" + a[0].toFixed(1) + "\" y1=\"" + a[1].toFixed(1) + "\" x2=\"" + b[0].toFixed(1) + "\" y2=\"" + b[1].toFixed(1) + "\"/>" + (showNumber ? "<text class=\"solid-edge-label edge-label-color-" + (edgeNumber % 4) + edgeLabelClass + "\" x=\"" + middle[0].toFixed(1) + "\" y=\"" + (middle[1] - 5).toFixed(1) + "\" text-anchor=\"middle\">" + (edgeNumber + 1) + "</text>" : "") + "</g>";
   }).join("");
   const vertexMarkup = property === 2 ? model.vertexIndices.filter(vertex => visibleVertices.has(vertex)).map((vertex, index) => {
     const point = projected[vertex];
-    return "<g><circle class=\"solid-vertex\" cx=\"" + point[0].toFixed(1) + "\" cy=\"" + point[1].toFixed(1) + "\" r=\"7\"/><text class=\"solid-vertex-label\" x=\"" + (point[0] + 10).toFixed(1) + "\" y=\"" + (point[1] - 9).toFixed(1) + "\">" + (index + 1) + "</text></g>";
+    const vertexLabel = options.vertexLabel ? options.vertexLabel(vertex, index, model) : index + 1;
+    const vertexLabelClass = options.vertexLabelClass ? " " + options.vertexLabelClass(vertex, index, model) : "";
+    return "<g><circle class=\"solid-vertex\" cx=\"" + point[0].toFixed(1) + "\" cy=\"" + point[1].toFixed(1) + "\" r=\"7\"/><text class=\"solid-vertex-label" + vertexLabelClass + "\" x=\"" + (point[0] + 10).toFixed(1) + "\" y=\"" + (point[1] - 9).toFixed(1) + "\">" + vertexLabel + "</text></g>";
   }).join("") : "";
   return faceMarkup + edgeMarkup + vertexMarkup;
 }
@@ -711,10 +719,12 @@ function bindSolidDrag(id, shape, t, options = {}) {
   if (!svg) return;
   const zoomMax = shape.id === "sphere" ? 1.35 : 2.2;
   t.zoom = clamp(Number(t.zoom) || 1, .7, zoomMax);
-  let dragging = false;
+  let activePointer = null;
   let moved = false;
-  let lastX = 0;
-  let lastY = 0;
+  let startX = 0;
+  let startY = 0;
+  let startViewX = 0;
+  let startViewY = 0;
   const scene = svg.closest(".solid-3d-scene");
   const redraw = () => {
     svg.innerHTML = solidSvgContent(shape, t, options);
@@ -726,34 +736,41 @@ function bindSolidDrag(id, shape, t, options = {}) {
     redraw();
   };
   svg.addEventListener("pointerdown", event => {
-    dragging = true;
+    if (activePointer !== null) return;
+    activePointer = event.pointerId;
     moved = false;
-    lastX = event.clientX;
-    lastY = event.clientY;
+    startX = event.clientX;
+    startY = event.clientY;
+    startViewX = t.viewX;
+    startViewY = t.viewY;
     try { svg.setPointerCapture?.(event.pointerId); } catch {}
     svg.classList.add("dragging");
+    window.addEventListener("pointermove", update, { passive: false });
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
     event.preventDefault();
   });
-  svg.addEventListener("pointermove", event => {
-    if (!dragging) return;
-    const dx = event.clientX - lastX;
-    const dy = event.clientY - lastY;
-    if (Math.abs(dx) + Math.abs(dy) > 1) moved = true;
-    t.viewY = (t.viewY + dx * .65) % 360;
-    t.viewX = clamp(t.viewX - dy * .65, -82, 82);
-    lastX = event.clientX;
-    lastY = event.clientY;
+  const update = event => {
+    if (event.pointerId !== activePointer) return;
+    const samples = event.getCoalescedEvents?.();
+    const point = samples?.length ? samples[samples.length - 1] : event;
+    const dx = point.clientX - startX;
+    const dy = point.clientY - startY;
+    if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
+    t.viewY = (startViewY + dx * .95) % 360;
+    t.viewX = clamp(startViewX - dy * .95, -82, 82);
     redraw();
     event.preventDefault();
-  });
+  };
   const stop = event => {
-    if (!dragging) return;
-    dragging = false;
+    if (event.pointerId !== activePointer) return;
+    activePointer = null;
     svg.classList.remove("dragging");
     try { svg.releasePointerCapture?.(event.pointerId); } catch {}
+    window.removeEventListener("pointermove", update);
+    window.removeEventListener("pointerup", stop);
+    window.removeEventListener("pointercancel", stop);
   };
-  svg.addEventListener("pointerup", stop);
-  svg.addEventListener("pointercancel", stop);
   svg.addEventListener("wheel", event => {
     setZoom(t.zoom + (event.deltaY < 0 ? .1 : -.1));
     event.preventDefault();
@@ -930,11 +947,11 @@ function foldingFaces(id) {
   };
 }
 
-function foldingNetSvg(shape, definition, t) {
+function foldingNetFaceMarkup(shape, definition, t) {
   if (shape.id === "cylinder") {
-    if (t.step === 0) return "<div class=\"solid-3d-scene\"><svg id=\"netFold3d\" class=\"solid-3d-svg net-fold-svg\" viewBox=\"0 0 310 260\">" + flatNetMarkup(t, definition, new Set(), definition.foldOrder[0]) + "</svg><div class=\"solid-drag-hint\">" + loc(ml("Bentangan lengkap masih bersambung", "完整展开图保持连接", "The complete net stays connected")) + "</div></div>";
+    if (t.step === 0) return flatNetMarkup(t, definition, new Set(), definition.foldOrder[0]);
     const visibleFaces = t.step === 1 ? [2,1] : [2,1,3];
-    return solid3dMarkup("netFold3d", shape, t, { property: 0, visibleFaces, alwaysLabels: true, zoomControls: false });
+    return solidSvgContent(shape, t, { property: 0, visibleFaces, alwaysLabels: true });
   }
   const setup = foldingFaces(shape.id);
   const displayScale = setup.scale * (1 + .25 * t.step / Math.max(1, definition.foldOrder.length));
@@ -955,29 +972,44 @@ function foldingNetSvg(shape, definition, t) {
     transformedFaces.push({ id: face.id, camera, projected, depth: camera.reduce((sum, point) => sum + point[2], 0) / camera.length });
   });
   const activeFace = t.step > 0 ? definition.foldOrder[t.step - 1] : definition.foldOrder[0];
-  const faceMarkup = transformedFaces.sort((a, b) => a.depth - b.depth).map(face => {
+  return transformedFaces.sort((a, b) => a.depth - b.depth).map(face => {
     const centre = face.projected.reduce((sum, point) => [sum[0] + point[0], sum[1] + point[1]], [0,0]).map(value => value / face.projected.length);
     return "<g class=\"folding-face-group" + (face.id === activeFace ? " active" : "") + "\"><polygon class=\"solid-face face-" + face.id + " feature-active\" points=\"" + face.projected.map(point => point.map(value => value.toFixed(1)).join(",")).join(" ") + "\"/><text class=\"solid-face-label\" x=\"" + centre[0].toFixed(1) + "\" y=\"" + (centre[1] + 6).toFixed(1) + "\" text-anchor=\"middle\">" + face.id + "</text></g>";
   }).join("");
-  return "<div class=\"solid-3d-scene\"><svg id=\"netFold3d\" class=\"solid-3d-svg net-fold-svg\" viewBox=\"0 0 420 300\" tabindex=\"0\">" + faceMarkup + "</svg><div class=\"solid-drag-hint\">🖐 " + loc(ml("Semua muka kekal bersambung", "所有面始终保持连接", "Every face stays connected")) + "</div></div>";
 }
 
-function bindNetFoldDrag(t) {
+function foldingNetSvg(shape, definition, t) {
+  const flatCylinder = shape.id === "cylinder" && t.step === 0;
+  const viewBox = flatCylinder ? "0 0 310 260" : "0 0 420 300";
+  const hint = flatCylinder
+    ? loc(ml("Bentangan lengkap masih bersambung", "完整展开图保持连接", "The complete net stays connected"))
+    : "🖐 " + loc(ml("Seret terus untuk memutar", "直接拖动即可旋转", "Drag directly to rotate"));
+  return "<div class=\"solid-3d-scene\"><svg id=\"netFold3d\" class=\"solid-3d-svg net-fold-svg\" viewBox=\"" + viewBox + "\" tabindex=\"0\">" + foldingNetFaceMarkup(shape, definition, t) + "</svg><div class=\"solid-drag-hint\">" + hint + "</div></div>";
+}
+
+function bindNetFoldDrag(t, shape, definition) {
   const svg = document.querySelector("#netFold3d");
-  if (!svg) return;
+  if (!svg || (shape.id === "cylinder" && t.step === 0)) return;
   svg.addEventListener("pointerdown", startEvent => {
     startEvent.preventDefault();
-    let lastX = startEvent.clientX, lastY = startEvent.clientY;
+    const pointerId = startEvent.pointerId;
+    const startX = startEvent.clientX, startY = startEvent.clientY;
+    const startViewX = t.viewX, startViewY = t.viewY;
+    try { svg.setPointerCapture?.(pointerId); } catch {}
+    svg.classList.add("dragging");
     const update = event => {
-      const dx = event.clientX - lastX, dy = event.clientY - lastY;
-      t.viewY = (t.viewY + dx * .65) % 360;
-      t.viewX = clamp(t.viewX - dy * .65, -82, 82);
-      lastX = event.clientX;
-      lastY = event.clientY;
-      renderTool();
+      if (event.pointerId !== pointerId) return;
+      const samples = event.getCoalescedEvents?.();
+      const point = samples?.length ? samples[samples.length - 1] : event;
+      t.viewY = (startViewY + (point.clientX - startX) * .95) % 360;
+      t.viewX = clamp(startViewX - (point.clientY - startY) * .95, -82, 82);
+      svg.innerHTML = foldingNetFaceMarkup(shape, definition, t);
       event.preventDefault();
     };
-    const stop = () => {
+    const stop = event => {
+      if (event.pointerId !== pointerId) return;
+      svg.classList.remove("dragging");
+      try { svg.releasePointerCapture?.(pointerId); } catch {}
       window.removeEventListener("pointermove", update);
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
@@ -1028,7 +1060,7 @@ function renderNetBuilder() {
   document.querySelector("#nextFold").addEventListener("click", () => { t.step = clamp(t.step + 1, 0, maxStep); renderTool(); });
   document.querySelector("#resetNetView").addEventListener("click", () => { t.viewX = -18; t.viewY = 30; renderTool(); });
   document.querySelector("#newNet").addEventListener("click", randomizeCurrent);
-  bindNetFoldDrag(t);
+  bindNetFoldDrag(t, shape, definition);
 }
 
 function drawnSolidModel(points, depth) {
@@ -1059,6 +1091,7 @@ function renderShapeDrawer() {
   if (!Number.isFinite(t.depth)) t.depth = 58;
   if (!Number.isFinite(t.viewX)) t.viewX = -18;
   if (!Number.isFinite(t.viewY)) t.viewY = 30;
+  if (!Number.isFinite(t.property)) t.property = 0;
   if (t.solid && !t.closed) t.solid = false;
   const sideCount = t.closed ? t.points.length : Math.max(0, t.points.length - 1);
 
@@ -1067,22 +1100,30 @@ function renderShapeDrawer() {
     const solidShape = { id: "drawnSolid" };
     const options = {
       model,
-      property: 0,
-      alwaysLabels: true,
+      property: t.property,
       faceLabel: face => face.role === "baseA"
         ? loc(ml("Tapak A", "底面 A", "Base A"))
         : face.role === "baseB"
           ? loc(ml("Tapak B", "底面 B", "Base B"))
           : loc(ml("Sisi ", "侧面 ", "Side ")) + face.sideNumber,
-      faceLabelClass: face => "drawn-solid-label " + (face.role === "side" ? "side-face-label" : "base-face-label")
+      faceLabelClass: face => "drawn-solid-label " + (face.role === "side" ? "side-face-label" : "base-face-label"),
+      edgeLabelClass: () => sideCount > 8 ? "dense-solid-label" : "",
+      vertexLabel: (vertex, index) => (vertex < sideCount ? "A" : "B") + ((vertex % sideCount) + 1),
+      vertexLabelClass: () => sideCount > 8 ? "dense-solid-label" : ""
     };
-    setChallenge(loc(ml("Bentuk telah disambung menjadi 3D", "图形已经连接成立体", "The shape is now connected as a 3D solid")), loc(ml("Seret model untuk melihat dua tapak dan semua permukaan sisi.", "拖动模型，查看两个底面和所有侧面。", "Drag the model to inspect both bases and every side face.")));
-    els.stage.innerHTML = "<div class=\"draw-solid-wrap\">" + solid3dMarkup("drawnSolid3d", solidShape, t, options) + "<div class=\"metric-row\">" + metric(tr("faces"), sideCount + 2) + metric(tr("edges"), sideCount * 3) + metric(tr("vertices"), sideCount * 2) + "</div></div>";
+    const featureHelp = [
+      loc(ml("Pilih Muka untuk melihat dua tapak dan semua permukaan sisi.", "选择“面”，查看两个底面和所有侧面。", "Choose Faces to inspect both bases and every side face.")),
+      loc(ml("Pilih Rusuk untuk menandakan dan menomborkan semua rusuk.", "选择“棱”，标出并编号全部棱。", "Choose Edges to mark and number every edge.")),
+      loc(ml("Pilih Bucu untuk menunjukkan titik A dan B yang sepadan.", "选择“顶点”，显示相互对应的 A、B 顶点。", "Choose Vertices to show the matching A and B points."))
+    ][t.property];
+    setChallenge(loc(ml("Bentuk telah disambung menjadi 3D", "图形已经连接成立体", "The shape is now connected as a 3D solid")), featureHelp);
+    els.stage.innerHTML = "<div class=\"draw-solid-wrap\">" + solid3dMarkup("drawnSolid3d", solidShape, t, options) + "<div class=\"metric-row feature-metric-row\">" + featureMetric(tr("faces"), sideCount + 2, 0, t.property === 0) + featureMetric(tr("edges"), sideCount * 3, 1, t.property === 1) + featureMetric(tr("vertices"), sideCount * 2, 2, t.property === 2) + "</div></div>";
     els.controls.innerHTML = "<div class=\"range-grid\">" + rangeControl("drawDepth", loc(ml("Kedalaman", "立体深度", "Solid depth")), 25, 100, 1, t.depth) + "</div><div class=\"board-actions\"><button id=\"toggleDrawSolid\" class=\"secondary-button compact\" type=\"button\">▦ " + loc(ml("Kembali ke satah", "回到平面", "Back to plane")) + "</button><button id=\"resetDrawView\" class=\"secondary-button compact\" type=\"button\">⌂ " + loc(ml("Pandangan asal", "恢复视角", "Reset view")) + "</button>" + randomButton() + "</div>";
-    setSummary(sideCount + " " + loc(ml("sisi tapak", "条底边", "base sides")) + " → <strong>" + (sideCount + 2) + " " + tr("faces") + "</strong>");
+    setSummary(featureHelp);
     document.querySelector("#drawDepth").addEventListener("input", event => { t.depth = Number(event.target.value); renderTool(); });
     document.querySelector("#toggleDrawSolid").addEventListener("click", () => { t.solid = false; renderTool(); });
-    document.querySelector("#resetDrawView").addEventListener("click", () => { t.viewX = -18; t.viewY = 30; renderTool(); });
+    document.querySelector("#resetDrawView").addEventListener("click", () => { t.viewX = -18; t.viewY = 30; t.zoom = 1; renderTool(); });
+    document.querySelectorAll("[data-solid-property]").forEach(button => button.addEventListener("click", () => { t.property = Number(button.dataset.solidProperty); renderTool(); }));
     document.querySelector("#randomExample").addEventListener("click", randomizeCurrent);
     bindSolidDrag("drawnSolid3d", solidShape, t, options);
     return;
@@ -1176,26 +1217,33 @@ function renderPrismLab() {
   const t = state.tool;
   if (!Number.isFinite(t.viewX)) t.viewX = -18;
   if (!Number.isFinite(t.viewY)) t.viewY = 30;
+  if (!Number.isFinite(t.property)) t.property = 0;
   const model = prismSolidModel(t.sides, t.depth);
   const shape = { id: "prism" };
   const options = {
     model,
-    property: 0,
-    alwaysLabels: true,
+    property: t.property,
     faceLabel: face => face.role === "baseA"
       ? loc(ml("Tapak A", "底面 A", "Base A"))
       : face.role === "baseB"
         ? loc(ml("Tapak B", "底面 B", "Base B"))
         : loc(ml("Sisi ", "侧面 ", "Side ")) + face.sideNumber,
-    faceLabelClass: face => "prism-face-label " + (face.role === "side" ? "side-face-label" : "base-face-label")
+    faceLabelClass: face => "prism-face-label " + (face.role === "side" ? "side-face-label" : "base-face-label"),
+    vertexLabel: vertex => (vertex < t.sides ? "A" : "B") + ((vertex % t.sides) + 1)
   };
-  setChallenge(t.sides + " " + tr("sides"), loc(ml("Seret model 3D. Dua tapak yang sama sentiasa disambungkan oleh permukaan sisi.", "直接拖动 3D 模型；两个相同的底面始终由侧面连接。", "Drag the 3D model. Two identical bases always stay connected by side faces.")));
-  els.stage.innerHTML = "<div class=\"prism-wrap prism-3d-wrap\">" + solid3dMarkup("prismSolid3d", shape, t, options) + "<div class=\"metric-row\">" + metric(tr("faces"), t.sides + 2) + metric(tr("edges"), t.sides * 3) + metric(tr("vertices"), t.sides * 2) + "</div></div>";
+  const featureHelp = [
+    loc(ml("Dua tapak yang sama sentiasa disambungkan oleh permukaan sisi.", "两个相同的底面始终由侧面连接。", "Two identical bases always stay connected by side faces.")),
+    loc(ml("Rusuk berwarna dan bernombor menunjukkan tempat dua muka bertemu.", "彩色编号棱表示两个面相交的位置。", "Coloured numbered edges show where two faces meet.")),
+    loc(ml("Bucu A dan B menunjukkan titik yang sepadan pada kedua-dua tapak.", "A、B 顶点显示两个底面上互相对应的点。", "A and B vertices show matching points on the two bases."))
+  ][t.property];
+  setChallenge(t.sides + " " + tr("sides"), featureHelp);
+  els.stage.innerHTML = "<div class=\"prism-wrap prism-3d-wrap\">" + solid3dMarkup("prismSolid3d", shape, t, options) + "<div class=\"metric-row feature-metric-row\">" + featureMetric(tr("faces"), t.sides + 2, 0, t.property === 0) + featureMetric(tr("edges"), t.sides * 3, 1, t.property === 1) + featureMetric(tr("vertices"), t.sides * 2, 2, t.property === 2) + "</div></div>";
   els.controls.innerHTML = "<div class=\"range-grid\">" + rangeControl("prismSides", tr("sides"), 3, 8, 1, t.sides) + rangeControl("prismDepth", loc(ml("Kedalaman", "深度", "Depth")), 25, 100, 1, t.depth) + "</div><div class=\"board-actions\"><button id=\"resetPrismView\" class=\"secondary-button compact\" type=\"button\">⌂ " + loc(ml("Pandangan asal", "恢复初始视角", "Reset view")) + "</button>" + randomButton() + "</div>";
-  setSummary((t.sides + 2) + " = 2 " + loc(ml("tapak", "个底面", "bases")) + " + " + t.sides + " " + loc(ml("permukaan sisi", "个侧面", "side faces")) + " · " + loc(ml("Seret model untuk menyemak semua muka.", "拖动模型查看所有面。", "Drag the model to inspect every face.")));
+  setSummary(featureHelp);
   document.querySelector("#prismSides").addEventListener("input", event => { t.sides = Number(event.target.value); renderTool(); });
   document.querySelector("#prismDepth").addEventListener("input", event => { t.depth = Number(event.target.value); renderTool(); });
-  document.querySelector("#resetPrismView").addEventListener("click", () => { t.viewX = -18; t.viewY = 30; renderTool(); });
+  document.querySelector("#resetPrismView").addEventListener("click", () => { t.viewX = -18; t.viewY = 30; t.zoom = 1; renderTool(); });
+  document.querySelectorAll("[data-solid-property]").forEach(button => button.addEventListener("click", () => { t.property = Number(button.dataset.solidProperty); renderTool(); }));
   document.querySelector("#randomExample").addEventListener("click", randomizeCurrent);
   bindSolidDrag("prismSolid3d", shape, t, options);
 }
@@ -1203,7 +1251,7 @@ function renderPrismLab() {
 function symmetryStampMarkup(item, mirrored = false) {
   const x = mirrored ? 600 - item.x : item.x;
   const css = mirrored ? "mirror-stamp" : "source-stamp";
-  const data = mirrored ? "" : " data-stamp-id=\"" + item.id + "\"";
+  const data = mirrored ? " data-mirror-id=\"" + item.id + "\"" : " data-stamp-id=\"" + item.id + "\"";
   const transform = "translate(" + x + " " + item.y + ")";
   let shape;
   if (item.type === "circle") shape = "<circle r=\"20\"/>";
@@ -1221,15 +1269,28 @@ function bindSymmetryStampDrag() {
     startEvent.stopPropagation();
     const id = Number(stamp.dataset.stampId);
     const rect = board.getBoundingClientRect();
+    const item = state.tool.stamps.find(entry => entry.id === id);
+    if (!item) return;
+    const pointerId = startEvent.pointerId;
+    const startX = startEvent.clientX;
+    const startY = startEvent.clientY;
+    const itemStartX = item.x;
+    const itemStartY = item.y;
+    const mirror = board.querySelector("[data-mirror-id=\"" + id + "\"]");
+    try { stamp.setPointerCapture?.(pointerId); } catch {}
     const update = event => {
+      if (event.pointerId !== pointerId) return;
       event.preventDefault();
-      const item = state.tool.stamps.find(entry => entry.id === id);
-      if (!item) return;
-      item.x = clamp((event.clientX - rect.left) / rect.width * 600, 28, 272);
-      item.y = clamp((event.clientY - rect.top) / rect.height * 320, 28, 292);
-      renderTool();
+      const samples = event.getCoalescedEvents?.();
+      const point = samples?.length ? samples[samples.length - 1] : event;
+      item.x = clamp(itemStartX + (point.clientX - startX) / rect.width * 600, 28, 272);
+      item.y = clamp(itemStartY + (point.clientY - startY) / rect.height * 320, 28, 292);
+      stamp.setAttribute("transform", "translate(" + item.x + " " + item.y + ")");
+      mirror?.setAttribute("transform", "translate(" + (600 - item.x) + " " + item.y + ")");
     };
-    const stop = () => {
+    const stop = event => {
+      if (event.pointerId !== pointerId) return;
+      try { stamp.releasePointerCapture?.(pointerId); } catch {}
       window.removeEventListener("pointermove", update);
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
@@ -1315,7 +1376,7 @@ function angleType(angle) {
   return loc(ml("Sudut lurus", "平角", "Straight angle"));
 }
 
-function protractorSvg(angle, target) {
+function protractorSvg(angle, target, innerOnly = false) {
   const cx = 250, cy = 225, radius = 175;
   const ticks = [];
   for (let degree = 0; degree <= 180; degree += 5) {
@@ -1342,7 +1403,7 @@ function protractorSvg(angle, target) {
   const dragText = loc(ml("SERET", "拖我", "DRAG"));
   const dragX = clamp(endpoint[0] - 27, 6, 440);
   const dragY = clamp(endpoint[1] - 42, 6, 218);
-  return "<svg id=\"angleBoard\" class=\"geometry-svg\" viewBox=\"0 0 500 260\">" +
+  const content =
     "<path class=\"protractor-arc\" d=\"M75 225 A175 175 0 0 0 425 225 L250 225 Z\"/>" +
     ticks.join("") +
     "<path d=\"M312 225 A62 62 0 0 0 " + arcEnd[0].toFixed(1) + " " + arcEnd[1].toFixed(1) + "\" fill=\"none\" stroke=\"#ffbd3f\" stroke-width=\"9\" stroke-linecap=\"round\" opacity=\".8\"/>" +
@@ -1352,38 +1413,69 @@ function protractorSvg(angle, target) {
     "<text class=\"angle-value-label\" x=\"" + labelPoint[0].toFixed(1) + "\" y=\"" + labelPoint[1].toFixed(1) + "\" text-anchor=\"middle\">" + angle + "°</text>" +
     "<g class=\"drag-label\" transform=\"translate(" + dragX.toFixed(1) + " " + dragY.toFixed(1) + ")\"><rect width=\"54\" height=\"25\" rx=\"9\"/><text x=\"27\" y=\"17\" text-anchor=\"middle\">" + dragText + "</text></g>" +
     "<circle id=\"angleHandle\" class=\"point-handle angle-handle\" cx=\"" + endpoint[0].toFixed(1) + "\" cy=\"" + endpoint[1].toFixed(1) + "\" r=\"13\" tabindex=\"0\" role=\"slider\" aria-valuemin=\"0\" aria-valuemax=\"180\" aria-valuenow=\"" + angle + "\"/>" +
-    "<circle cx=\"250\" cy=\"225\" r=\"7\" fill=\"#3f2b14\"/></svg>";
+    "<circle cx=\"250\" cy=\"225\" r=\"7\" fill=\"#3f2b14\"/>";
+  return innerOnly ? content : "<svg id=\"angleBoard\" class=\"geometry-svg draggable-board\" viewBox=\"0 0 500 260\">" + content + "</svg>";
 }
 
 function bindAngleDrag() {
   const board = document.querySelector("#angleBoard");
-  const handle = document.querySelector("#angleHandle");
-  if (!board || !handle) return;
+  if (!board) return;
   const beginDrag = startEvent => {
     startEvent.preventDefault();
     const rect = board.getBoundingClientRect();
+    const pointerId = startEvent.pointerId;
+    const isConstruction = state.grade === 6;
+    try { board.setPointerCapture?.(pointerId); } catch {}
+    const redraw = () => {
+      board.innerHTML = protractorSvg(state.tool.angle, isConstruction ? state.tool.target : null, true);
+      const range = document.querySelector("#angleRange");
+      if (range) range.value = state.tool.angle;
+      const output = range?.closest(".range-control")?.querySelector("output");
+      if (output) output.textContent = state.tool.angle + "°";
+      const metrics = document.querySelectorAll(".stage-stack > .metric-row .metric strong");
+      const valueMetric = metrics[isConstruction ? 1 : 0];
+      if (valueMetric) valueMetric.textContent = state.tool.angle + "°";
+      const typeMetric = metrics[metrics.length - 1];
+      if (typeMetric) typeMetric.textContent = angleType(state.tool.angle);
+      if (!isConstruction) document.querySelector(".challenge-sub").textContent = angleType(state.tool.angle);
+      const difference = isConstruction ? Math.abs(state.tool.angle - state.tool.target) : 0;
+      setSummary(isConstruction
+        ? difference === 0
+          ? "✓ " + loc(ml("Jejari anda tepat pada sudut sasaran.", "你的射线正好落在目标角度。", "Your ray is exactly on the target angle."))
+          : loc(ml("Perbezaan daripada sasaran", "与目标相差", "Difference from target")) + ": <strong>" + difference + "°</strong>"
+        : "<strong>" + state.tool.angle + "°</strong> · " + angleType(state.tool.angle), difference === 0 && isConstruction ? "success" : "neutral");
+    };
     const update = event => {
+      if (event.pointerId !== pointerId) return;
       event.preventDefault();
-    const x = (event.clientX - rect.left) / rect.width * 500;
-    const y = (event.clientY - rect.top) / rect.height * 260;
-    let value = Math.atan2(225 - y, x - 250) * 180 / Math.PI;
-    value = Math.round(clamp(value, 0, 180));
+      const samples = event.getCoalescedEvents?.();
+      const point = samples?.length ? samples[samples.length - 1] : event;
+      const x = (point.clientX - rect.left) / rect.width * 500;
+      const y = (point.clientY - rect.top) / rect.height * 260;
+      let value = Math.atan2(225 - y, x - 250) * 180 / Math.PI;
+      value = Math.round(clamp(value, 0, 180));
       if (value !== state.tool.angle) {
         state.tool.angle = value;
-        renderTool();
+        redraw();
       }
     };
-    const end = () => {
+    const end = event => {
+      if (event.pointerId !== pointerId) return;
+      try { board.releasePointerCapture?.(pointerId); } catch {}
       window.removeEventListener("pointermove", update);
       window.removeEventListener("pointerup", end);
       window.removeEventListener("pointercancel", end);
     };
     window.addEventListener("pointermove", update, { passive: false });
-    window.addEventListener("pointerup", end, { once: true });
-    window.addEventListener("pointercancel", end, { once: true });
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
   };
-  handle.addEventListener("pointerdown", beginDrag);
-  handle.addEventListener("keydown", event => {
+  board.addEventListener("pointerdown", event => {
+    if (!event.target.closest?.("#angleHandle")) return;
+    beginDrag(event);
+  });
+  board.addEventListener("keydown", event => {
+    if (!event.target.closest?.("#angleHandle")) return;
     if (!["ArrowLeft","ArrowDown","ArrowRight","ArrowUp"].includes(event.key)) return;
     event.preventDefault();
     const change = event.key === "ArrowLeft" || event.key === "ArrowDown" ? -1 : 1;
@@ -1455,41 +1547,7 @@ function pointOnLineAngle(angle, radius, cx = 320, cy = 150) {
   return [cx + Math.cos(rad) * radius, cy - Math.sin(rad) * radius];
 }
 
-function bindLineDrag() {
-  const board = document.querySelector("#lineBoard");
-  if (!board) return;
-  document.querySelectorAll("[data-line-handle]").forEach(handle => {
-    handle.addEventListener("pointerdown", startEvent => {
-      startEvent.preventDefault();
-      const key = handle.dataset.lineHandle === "A" ? "angleA" : "angleB";
-      const rect = board.getBoundingClientRect();
-      const update = event => {
-        event.preventDefault();
-        const x = (event.clientX - rect.left) / rect.width * 640;
-        const y = (event.clientY - rect.top) / rect.height * 300;
-        let angle = Math.atan2(150 - y, x - 320) * 180 / Math.PI;
-        if (angle < 0) angle += 180;
-        if (angle >= 180) angle -= 180;
-        const value = Math.round(angle);
-        if (state.tool[key] !== value) {
-          state.tool[key] = value;
-          renderTool();
-        }
-      };
-      const stop = () => {
-        window.removeEventListener("pointermove", update);
-        window.removeEventListener("pointerup", stop);
-        window.removeEventListener("pointercancel", stop);
-      };
-      window.addEventListener("pointermove", update, { passive: false });
-      window.addEventListener("pointerup", stop, { once: true });
-      window.addEventListener("pointercancel", stop, { once: true });
-    });
-  });
-}
-
-function renderLineLab() {
-  const t = state.tool;
+function lineDiagram(t) {
   const a = lineCoordinates(t.angleA);
   const aHandle = lineCoordinates(t.angleA, 100);
   const relation = lineRelationship(t.angleA, t.angleB);
@@ -1508,8 +1566,71 @@ function renderLineLab() {
   const angleMark = relation.type === "parallel"
     ? ""
     : "<path id=\"lineAngleArc\" data-start-angle=\"" + arcStartAngle + "\" data-end-angle=\"" + arcEndAngle + "\" d=\"M" + arcStart[0].toFixed(1) + " " + arcStart[1].toFixed(1) + " A45 45 0 0 " + sweep + " " + arcEnd[0].toFixed(1) + " " + arcEnd[1].toFixed(1) + "\" fill=\"none\" stroke=\"#ffbd3f\" stroke-width=\"7\" stroke-linecap=\"round\"/><text class=\"diagram-label accent angle-between-label\" x=\"" + arcLabel[0].toFixed(1) + "\" y=\"" + arcLabel[1].toFixed(1) + "\" text-anchor=\"middle\">" + relation.angle + "°</text>";
+  const markup = "<line x1=\"" + a[0] + "\" y1=\"" + a[1] + "\" x2=\"" + a[2] + "\" y2=\"" + a[3] + "\" stroke=\"#0d806b\" stroke-width=\"8\" stroke-linecap=\"round\"/><line x1=\"" + b[0] + "\" y1=\"" + b[1] + "\" x2=\"" + b[2] + "\" y2=\"" + b[3] + "\" stroke=\"#8062c6\" stroke-width=\"8\" stroke-linecap=\"round\"/>" + angleMark + "<text class=\"diagram-label accent\" x=\"" + (aHandle[2] + 17).toFixed(1) + "\" y=\"" + (aHandle[3] - 17).toFixed(1) + "\">A · " + t.angleA + "°</text><text class=\"diagram-label\" x=\"" + (bHandle[2] + 17).toFixed(1) + "\" y=\"" + (bHandle[3] - 17).toFixed(1) + "\">B · " + t.angleB + "°</text><circle class=\"line-drag-handle handle-a\" data-line-handle=\"A\" cx=\"" + aHandle[2] + "\" cy=\"" + aHandle[3] + "\" r=\"14\"/><circle class=\"line-drag-handle handle-b\" data-line-handle=\"B\" cx=\"" + bHandle[2] + "\" cy=\"" + bHandle[3] + "\" r=\"14\"/>" + (relation.type === "parallel" ? "" : "<circle cx=\"320\" cy=\"150\" r=\"8\" fill=\"#ffbd3f\" stroke=\"#6d4a1e\" stroke-width=\"3\"/>");
+  return { markup, relation };
+}
+
+function bindLineDrag() {
+  const board = document.querySelector("#lineBoard");
+  if (!board) return;
+  board.addEventListener("pointerdown", startEvent => {
+      const handle = startEvent.target.closest?.("[data-line-handle]");
+      if (!handle) return;
+      startEvent.preventDefault();
+      const key = handle.dataset.lineHandle === "A" ? "angleA" : "angleB";
+      const rect = board.getBoundingClientRect();
+      const pointerId = startEvent.pointerId;
+      try { board.setPointerCapture?.(pointerId); } catch {}
+      const redraw = () => {
+        const { markup, relation } = lineDiagram(state.tool);
+        board.innerHTML = markup;
+        [["lineA","angleA"],["lineB","angleB"]].forEach(([id, property]) => {
+          const range = document.getElementById(id);
+          if (range) range.value = state.tool[property];
+          const output = range?.closest(".range-control")?.querySelector("output");
+          if (output) output.textContent = state.tool[property] + "°";
+        });
+        const metrics = document.querySelectorAll(".stage-stack > .metric-row .metric strong");
+        if (metrics[0]) metrics[0].textContent = state.tool.angleA + "°";
+        if (metrics[1]) metrics[1].textContent = state.tool.angleB + "°";
+        if (metrics[2]) metrics[2].textContent = relation.angle + "°";
+        setChallenge(loc(relation.label), loc(ml("Seret pemegang A atau B pada rajah, atau gunakan butang pantas.", "直接拖动图中的 A 或 B 控制点，也可使用快捷按钮。", "Drag handle A or B on the diagram, or use a quick button.")));
+        setSummary(loc(relation.label) + (relation.type === "intersect" ? " · " + loc(ml("Sudut terkecil", "较小夹角", "Smaller angle")) + " " + relation.angle + "°" : ""), relation.type === "perpendicular" || relation.type === "parallel" ? "success" : "neutral");
+      };
+      const update = event => {
+        if (event.pointerId !== pointerId) return;
+        event.preventDefault();
+        const samples = event.getCoalescedEvents?.();
+        const point = samples?.length ? samples[samples.length - 1] : event;
+        const x = (point.clientX - rect.left) / rect.width * 640;
+        const y = (point.clientY - rect.top) / rect.height * 300;
+        let angle = Math.atan2(150 - y, x - 320) * 180 / Math.PI;
+        if (angle < 0) angle += 180;
+        if (angle >= 180) angle -= 180;
+        const value = Math.round(angle);
+        if (state.tool[key] !== value) {
+          state.tool[key] = value;
+          redraw();
+        }
+      };
+      const stop = event => {
+        if (event.pointerId !== pointerId) return;
+        try { board.releasePointerCapture?.(pointerId); } catch {}
+        window.removeEventListener("pointermove", update);
+        window.removeEventListener("pointerup", stop);
+        window.removeEventListener("pointercancel", stop);
+      };
+      window.addEventListener("pointermove", update, { passive: false });
+      window.addEventListener("pointerup", stop);
+      window.addEventListener("pointercancel", stop);
+  });
+}
+
+function renderLineLab() {
+  const t = state.tool;
+  const { markup, relation } = lineDiagram(t);
   setChallenge(loc(relation.label), loc(ml("Seret pemegang A atau B pada rajah, atau gunakan butang pantas.", "直接拖动图中的 A 或 B 控制点，也可使用快捷按钮。", "Drag handle A or B on the diagram, or use a quick button.")));
-  els.stage.innerHTML = "<div class=\"stage-stack\"><svg id=\"lineBoard\" class=\"line-lab-svg draggable-board\" viewBox=\"0 0 640 300\"><line x1=\"" + a[0] + "\" y1=\"" + a[1] + "\" x2=\"" + a[2] + "\" y2=\"" + a[3] + "\" stroke=\"#0d806b\" stroke-width=\"8\" stroke-linecap=\"round\"/><line x1=\"" + b[0] + "\" y1=\"" + b[1] + "\" x2=\"" + b[2] + "\" y2=\"" + b[3] + "\" stroke=\"#8062c6\" stroke-width=\"8\" stroke-linecap=\"round\"/>" + angleMark + "<text class=\"diagram-label accent\" x=\"" + (aHandle[2] + 17).toFixed(1) + "\" y=\"" + (aHandle[3] - 17).toFixed(1) + "\">A · " + t.angleA + "°</text><text class=\"diagram-label\" x=\"" + (bHandle[2] + 17).toFixed(1) + "\" y=\"" + (bHandle[3] - 17).toFixed(1) + "\">B · " + t.angleB + "°</text><circle class=\"line-drag-handle handle-a\" data-line-handle=\"A\" cx=\"" + aHandle[2] + "\" cy=\"" + aHandle[3] + "\" r=\"14\"/><circle class=\"line-drag-handle handle-b\" data-line-handle=\"B\" cx=\"" + bHandle[2] + "\" cy=\"" + bHandle[3] + "\" r=\"14\"/>" + (relation.type === "parallel" ? "" : "<circle cx=\"320\" cy=\"150\" r=\"8\" fill=\"#ffbd3f\" stroke=\"#6d4a1e\" stroke-width=\"3\"/>") + "</svg><div class=\"metric-row\">" + metric("A", t.angleA + "°") + metric("B", t.angleB + "°") + metric(loc(ml("Sudut terkecil", "较小夹角", "Smaller angle")), relation.angle + "°", true) + "</div></div>";
+  els.stage.innerHTML = "<div class=\"stage-stack\"><svg id=\"lineBoard\" class=\"line-lab-svg draggable-board\" viewBox=\"0 0 640 300\">" + markup + "</svg><div class=\"metric-row\">" + metric("A", t.angleA + "°") + metric("B", t.angleB + "°") + metric(loc(ml("Sudut terkecil", "较小夹角", "Smaller angle")), relation.angle + "°", true) + "</div></div>";
   els.controls.innerHTML = "<div class=\"range-grid\">" + rangeControl("lineA", loc(ml("Putaran garisan A", "直线 A 旋转", "Line A rotation")), 0, 179, 1, t.angleA, "°") + rangeControl("lineB", loc(ml("Putaran garisan B", "直线 B 旋转", "Line B rotation")), 0, 179, 1, t.angleB, "°") + "</div><div class=\"board-actions\"><button id=\"snapParallel\" class=\"secondary-button compact\" type=\"button\">∥ " + loc(ml("Selari", "平行", "Parallel")) + "</button><button id=\"snapPerpendicular\" class=\"secondary-button compact\" type=\"button\">⊥ " + loc(ml("Serenjang", "垂直", "Perpendicular")) + "</button>" + randomButton() + "</div>";
   setSummary(loc(relation.label) + (relation.type === "intersect" ? " · " + loc(ml("Sudut terkecil", "较小夹角", "Smaller angle")) + " " + relation.angle + "°" : ""), relation.type === "perpendicular" || relation.type === "parallel" ? "success" : "neutral");
   document.querySelector("#lineA").addEventListener("input", event => { t.angleA = Number(event.target.value); renderTool(); });
@@ -1713,38 +1834,7 @@ function renderCompositeVolume() {
   document.querySelector("#randomExample").addEventListener("click", randomizeCurrent);
 }
 
-function bindCircleDrag() {
-  const board = document.querySelector("#circleBoard");
-  const handle = document.querySelector("#circleDragHandle");
-  if (!board || !handle) return;
-  handle.addEventListener("pointerdown", startEvent => {
-    startEvent.preventDefault();
-    const rect = board.getBoundingClientRect();
-    const update = event => {
-      event.preventDefault();
-      const x = (event.clientX - rect.left) / rect.width * 520;
-      const y = (event.clientY - rect.top) / rect.height * 315;
-      let angle = Math.atan2(y - 155, x - 260) * 180 / Math.PI;
-      if (angle < 0) angle += 360;
-      const value = Math.round(angle);
-      if (state.tool.draw !== value) {
-        state.tool.draw = value;
-        renderTool();
-      }
-    };
-    const stop = () => {
-      window.removeEventListener("pointermove", update);
-      window.removeEventListener("pointerup", stop);
-      window.removeEventListener("pointercancel", stop);
-    };
-    window.addEventListener("pointermove", update, { passive: false });
-    window.addEventListener("pointerup", stop, { once: true });
-    window.addEventListener("pointercancel", stop, { once: true });
-  });
-}
-
-function renderCircleLab() {
-  const t = state.tool;
+function circleDiagram(t) {
   const cx = 260, cy = 155;
   const angle = t.draw * Math.PI / 180;
   const px = cx + Math.cos(angle) * t.radius;
@@ -1759,15 +1849,69 @@ function renderCircleLab() {
   const circumference = 2 * Math.PI * t.radius;
   const centreText = loc(ml("Pusat O · jarum kekal", "圆心 O · 针尖固定", "Centre O · fixed needle"));
   const pencilText = loc(ml("Mata pensel · seret", "铅笔尖 · 拖动", "Pencil tip · drag"));
-  setChallenge(loc(ml("Seret mata pensel merah untuk melukis bulatan", "拖动红色铅笔尖画圆", "Drag the red pencil tip to draw the circle")), loc(ml("Jarum kekal pada pusat O; jarak O ke pensel ialah jejari ", "针尖固定在圆心 O；O 到铅笔尖的距离是半径 ", "The needle stays at centre O; O to the pencil is radius ")) + t.radius + " mm.");
-  els.stage.innerHTML = "<div class=\"circle-wrap\"><svg id=\"circleBoard\" class=\"geometry-svg draggable-board\" viewBox=\"0 0 520 315\">" +
+  const markup =
     "<circle class=\"circle-guide\" cx=\"" + cx + "\" cy=\"" + cy + "\" r=\"" + t.radius + "\"/>" +
     "<circle class=\"circle-main\" cx=\"" + cx + "\" cy=\"" + cy + "\" r=\"" + t.radius + "\" stroke-dasharray=\"" + circumference.toFixed(1) + "\" stroke-dashoffset=\"" + (circumference * (1 - t.draw / 360)).toFixed(1) + "\"/>" +
     "<line class=\"radius-line\" x1=\"" + cx + "\" y1=\"" + cy + "\" x2=\"" + px.toFixed(1) + "\" y2=\"" + py.toFixed(1) + "\"/>" +
     (t.diameter ? "<line class=\"diameter-line\" x1=\"" + (cx - t.radius) + "\" y1=\"" + cy + "\" x2=\"" + (cx + t.radius) + "\" y2=\"" + cy + "\"/><text class=\"diagram-label diameter-label\" x=\"" + cx + "\" y=\"" + (cy + 42) + "\" text-anchor=\"middle\">d = " + (t.radius * 2) + " mm</text>" : "") +
     "<line class=\"compass-arm\" x1=\"" + hingeX.toFixed(1) + "\" y1=\"" + hingeY.toFixed(1) + "\" x2=\"" + cx + "\" y2=\"" + cy + "\"/><line class=\"compass-pencil\" x1=\"" + hingeX.toFixed(1) + "\" y1=\"" + hingeY.toFixed(1) + "\" x2=\"" + px.toFixed(1) + "\" y2=\"" + py.toFixed(1) + "\"/>" +
     "<circle class=\"compass-hinge\" cx=\"" + hingeX.toFixed(1) + "\" cy=\"" + hingeY.toFixed(1) + "\" r=\"8\"/><circle class=\"compass-needle\" cx=\"" + cx + "\" cy=\"" + cy + "\" r=\"7\"/><circle id=\"circleDragHandle\" class=\"circle-drag-handle\" cx=\"" + px.toFixed(1) + "\" cy=\"" + py.toFixed(1) + "\" r=\"12\"/>" +
-    "<text class=\"diagram-label accent radius-label\" x=\"" + radiusLabelX.toFixed(1) + "\" y=\"" + radiusLabelY.toFixed(1) + "\" text-anchor=\"middle\">r = " + t.radius + " mm</text><text class=\"diagram-label centre-label\" x=\"" + (cx - 62) + "\" y=\"" + (cy - 14) + "\" text-anchor=\"middle\">" + centreText + "</text><text class=\"diagram-label pencil-label\" x=\"" + pencilLabelX.toFixed(1) + "\" y=\"" + pencilLabelY.toFixed(1) + "\" text-anchor=\"middle\">" + pencilText + "</text></svg>" +
+    "<text class=\"diagram-label accent radius-label\" x=\"" + radiusLabelX.toFixed(1) + "\" y=\"" + radiusLabelY.toFixed(1) + "\" text-anchor=\"middle\">r = " + t.radius + " mm</text><text class=\"diagram-label centre-label\" x=\"" + (cx - 62) + "\" y=\"" + (cy - 14) + "\" text-anchor=\"middle\">" + centreText + "</text><text class=\"diagram-label pencil-label\" x=\"" + pencilLabelX.toFixed(1) + "\" y=\"" + pencilLabelY.toFixed(1) + "\" text-anchor=\"middle\">" + pencilText + "</text>";
+  return { markup, circumference };
+}
+
+function bindCircleDrag() {
+  const board = document.querySelector("#circleBoard");
+  if (!board) return;
+  board.addEventListener("pointerdown", startEvent => {
+    if (!startEvent.target.closest?.("#circleDragHandle")) return;
+    startEvent.preventDefault();
+    const rect = board.getBoundingClientRect();
+    const pointerId = startEvent.pointerId;
+    try { board.setPointerCapture?.(pointerId); } catch {}
+    const redraw = () => {
+      board.innerHTML = circleDiagram(state.tool).markup;
+      const range = document.getElementById("circleDraw");
+      if (range) range.value = state.tool.draw;
+      const output = range?.closest(".range-control")?.querySelector("output");
+      if (output) output.textContent = state.tool.draw + "°";
+      const tracedMetric = document.querySelector(".circle-wrap .metric-row .metric:last-child strong");
+      if (tracedMetric) tracedMetric.textContent = state.tool.draw + "° / 360°";
+      setSummary("r = " + state.tool.radius + " mm · d = 2r = <strong>" + (state.tool.radius * 2) + " mm</strong> · " + loc(ml("dilukis", "已画", "traced")) + " " + state.tool.draw + "° / 360°");
+    };
+    const update = event => {
+      if (event.pointerId !== pointerId) return;
+      event.preventDefault();
+      const samples = event.getCoalescedEvents?.();
+      const point = samples?.length ? samples[samples.length - 1] : event;
+      const x = (point.clientX - rect.left) / rect.width * 520;
+      const y = (point.clientY - rect.top) / rect.height * 315;
+      let angle = Math.atan2(y - 155, x - 260) * 180 / Math.PI;
+      if (angle < 0) angle += 360;
+      const value = Math.round(angle);
+      if (state.tool.draw !== value) {
+        state.tool.draw = value;
+        redraw();
+      }
+    };
+    const stop = event => {
+      if (event.pointerId !== pointerId) return;
+      try { board.releasePointerCapture?.(pointerId); } catch {}
+      window.removeEventListener("pointermove", update);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    window.addEventListener("pointermove", update, { passive: false });
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  });
+}
+
+function renderCircleLab() {
+  const t = state.tool;
+  const { markup } = circleDiagram(t);
+  setChallenge(loc(ml("Seret mata pensel merah untuk melukis bulatan", "拖动红色铅笔尖画圆", "Drag the red pencil tip to draw the circle")), loc(ml("Jarum kekal pada pusat O; jarak O ke pensel ialah jejari ", "针尖固定在圆心 O；O 到铅笔尖的距离是半径 ", "The needle stays at centre O; O to the pencil is radius ")) + t.radius + " mm.");
+  els.stage.innerHTML = "<div class=\"circle-wrap\"><svg id=\"circleBoard\" class=\"geometry-svg draggable-board\" viewBox=\"0 0 520 315\">" + markup + "</svg>" +
     "<div class=\"circle-legend\"><span><i class=\"legend-dot needle\"></i>" + loc(ml("Jarum tetap di O", "针尖固定在 O", "Needle fixed at O")) + "</span><span><i class=\"legend-dot pencil\"></i>" + loc(ml("Pensel merah boleh diseret", "红色铅笔尖可以拖动", "Red pencil tip can be dragged")) + "</span><span><i class=\"legend-line traced\"></i>" + loc(ml("Garisan hijau telah dilukis", "绿色线是已经画出的圆周", "Green line is the traced circle")) + "</span></div>" +
     "<div class=\"metric-row\">" + metric(tr("radius") + " r", t.radius + " mm") + metric(tr("diameter") + " d", (t.radius * 2) + " mm", t.diameter) + metric(loc(ml("Sudah dilukis", "已经画了", "Traced")), t.draw + "° / 360°") + "</div></div>";
   els.controls.innerHTML = "<div class=\"range-grid\">" + rangeControl("circleRadius", tr("radius") + " r", 35, 115, 1, t.radius, " mm") + rangeControl("circleDraw", loc(ml("Pensel mengelilingi O", "铅笔尖绕 O 转动", "Pencil around O")), 0, 360, 1, t.draw, "°") + "</div><div class=\"board-actions\"><button id=\"toggleDiameter\" class=\"secondary-button compact\" type=\"button\">↔ " + (t.diameter ? loc(ml("Sembunyikan diameter", "隐藏直径", "Hide diameter")) : loc(ml("Tunjukkan diameter", "显示直径", "Show diameter"))) + "</button>" + randomButton() + "</div>";

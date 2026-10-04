@@ -15,15 +15,15 @@ This is a classroom tool, not a question-and-answer exercise site. Learners move
 - Values and face numbers labelled directly on diagrams
 - Angle and rotation tools begin at 0°; angle rays support 1° adjustment
 - Solid models can be dragged directly in true 3D and zoomed with visible controls or the mouse wheel; numbered faces, colour-coded numbered edges and numbered vertices remain identifiable while rotating
-- The point-grid drawing board accepts individual clicks or a continuous drag across grid points, then extrudes any closed outline into a draggable 3D solid
-- The Year 3 prism lab uses a draggable 3D model whose base sides and depth can be changed independently
+- The point-grid drawing board accepts individual clicks or a continuous drag across grid points, then extrudes any closed outline into a draggable 3D solid; its Face, Edge and Vertex cards switch the matching labels on the model
+- The Year 3 prism lab uses a draggable 3D model whose base sides and depth can be changed independently, with the same clickable Face, Edge and Vertex inspection modes
 - Cube, cuboid, pyramid and cylinder nets are available; cube and cuboid nets consistently use the central base as face 1, while every numbered face stays connected and folds along its shared edge
 - Symmetry offers draggable everyday shapes with a live mirror as well as the optional square-grid model
 - Triangle perimeter diagrams physically reshape when any side length changes
 - Unit-block length, width and height guides sit beside the matching rows, columns and layers
 - Maximum-size area shapes scale to stay inside the board; unit-block layers use stable back-to-front drawing order
 - Composite cut-outs may leave a one-centimetre strip, including an 11 cm cut from a 12 cm outer width
-- Lines and the compass pencil can be dragged directly on their diagrams
+- Lines, angle rays, the compass pencil, symmetry stamps, folding nets and 3D solids update inside the same board while dragging, so they continuously follow the pointer or finger
 - Every range control remains continuously draggable while its diagram updates
 - Responsive desktop, tablet and mobile layout
 
@@ -47,7 +47,8 @@ tests/smoke.mjs checks:
 
 - all 15 distinct tools and their Year 2–6 navigation
 - random examples and direct manipulation of solids, lines, rays, compass arms and sliders
-- click-or-drag point drawing, closed-outline 3D extrusion, zoom controls and the draggable Year 3 prism model
+- direct-follow pointer updates without rebuilding the board during a drag
+- click-or-drag point drawing, closed-outline 3D extrusion, clickable face/edge/vertex inspection, zoom controls and the draggable Year 3 prism model
 - 0° defaults, 1° protractor adjustment and continuous angle dragging
 - connected step-by-step cube, cuboid and pyramid folding into draggable 3D solids, including face 1 as the cube/cuboid base
 - direct numbered labels on 2D sides and corners, 3D faces, edges and vertices
