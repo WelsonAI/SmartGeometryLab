@@ -11,6 +11,10 @@ This is a classroom tool, not a question-and-answer exercise site. Learners move
 - Click feedback sounds can be switched off
 - Random examples and contextual teacher settings
 - Mouse, touch and keyboard-friendly controls
+- Three visible usage steps for every tool
+- Values and face numbers labelled directly on diagrams
+- Angle and rotation tools begin at 0°; angle rays support 1° adjustment
+- Cube nets fold one numbered face at a time into a matching 3D model
 - Responsive desktop, tablet and mobile layout
 
 ## Textbook-aligned progression
@@ -33,7 +37,10 @@ tests/smoke.mjs checks:
 
 - all 15 distinct tools and their Year 2–6 navigation
 - random and direct manipulation
-- protractor, symmetry, line, area, volume, polygon and circle interactions
+- 0° defaults, 1° protractor adjustment and continuous angle dragging
+- numbered five-step cube-net folding
+- direct labels on shapes, symmetry axes, dimensions, angles and circles
+- symmetry, line, area, volume, polygon and circle interactions
 - contextual teacher settings
 - three-language switching
 - absent listening controls

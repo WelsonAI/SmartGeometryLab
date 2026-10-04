@@ -34,11 +34,12 @@ async function evaluate(expression) {
   return result.result.value;
 }
 
-async function capture({ width, height, grade, mode, activity, lang, output }) {
+async function capture({ width, height, grade, mode, activity, lang, output, after }) {
   await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 600 });
   await send("Page.navigate", { url: targetUrl });
   await new Promise(resolve => setTimeout(resolve, 600));
   await evaluate("(() => { const g=document.getElementById('gradeSelect'); g.value='" + grade + "'; g.dispatchEvent(new Event('change',{bubbles:true})); document.querySelector('[data-mode=" + mode + "]').click(); const a=document.getElementById('activitySelect'); a.value='" + activity + "'; a.dispatchEvent(new Event('change',{bubbles:true})); document.querySelector('[data-lang=" + lang + "]').click(); })()");
+  if (after) await evaluate(after);
   await new Promise(resolve => setTimeout(resolve, 150));
   const size = await evaluate("({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight})");
   const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true, clip: { x: 0, y: 0, width: size.width, height: size.height, scale: 1 } });
@@ -50,7 +51,7 @@ await send("Page.enable");
 await send("Runtime.enable");
 await capture({ width: 1440, height: 1000, grade: 4, mode: "measure", activity: "areaLab", lang: "zh", output: "review-area-desktop.png" });
 await capture({ width: 1440, height: 1000, grade: 6, mode: "line", activity: "angleLab", lang: "ms", output: "review-angle-desktop.png" });
-await capture({ width: 1440, height: 1000, grade: 2, mode: "shape", activity: "netBuilder", lang: "zh", output: "review-net-desktop.png" });
+await capture({ width: 1440, height: 1000, grade: 2, mode: "shape", activity: "netBuilder", lang: "zh", output: "review-net-desktop.png", after: "(() => { for(let i=0;i<3;i++) document.getElementById('nextFold').click(); })()" });
 await capture({ width: 1440, height: 1000, grade: 5, mode: "measure", activity: "compositeVolume", lang: "en", output: "review-volume-desktop.png" });
 await capture({ width: 390, height: 844, grade: 3, mode: "shape", activity: "symmetryLab", lang: "zh", output: "review-symmetry-mobile.png" });
 socket.close();

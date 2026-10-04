@@ -85,6 +85,7 @@ for (const [grade, modes] of Object.entries(expected)) {
           activity,
           stage:document.querySelectorAll("#visualStage > *").length,
           controls:document.querySelectorAll("#controlArea button,#controlArea input").length,
+          guideSteps:document.querySelectorAll("#toolGuide .tool-guide-step").length,
           summary:document.getElementById("liveSummary").textContent.trim().length,
           overflow:document.documentElement.scrollWidth-window.innerWidth
         });
@@ -92,7 +93,7 @@ for (const [grade, modes] of Object.entries(expected)) {
       return {list,checks};
     })()`);
     if (result.list.join(",") !== activities.join(",")) throw new Error(grade + "/" + mode + " mismatch: " + result.list);
-    if (result.checks.some(check => !check.stage || !check.controls || !check.summary || check.overflow > 1)) throw new Error(grade + "/" + mode + " incomplete: " + JSON.stringify(result.checks));
+    if (result.checks.some(check => !check.stage || !check.controls || check.guideSteps !== 3 || !check.summary || check.overflow > 1)) throw new Error(grade + "/" + mode + " incomplete: " + JSON.stringify(result.checks));
     covered.push(...result.list);
   }
 }
@@ -113,19 +114,48 @@ const interactions = await evaluate(`(() => {
   document.getElementById("randomExample").click();
   const draw={closed:state.tool.closed,points:state.tool.points.length};
 
+  choose(2,"shape","shapeExplorer");
+  const shapeDefaults={rotation:state.tool.rotation,pyramidLabels:0};
+  document.querySelector("[data-shape=pyramid]").click();
+  shapeDefaults.pyramidLabels=document.querySelectorAll(".shape-picture .diagram-label").length;
+
+  choose(2,"shape","netBuilder");
+  const net={initialStep:state.tool.step,steps:[]};
+  for(let i=0;i<5;i++){
+    document.getElementById("nextFold").click();
+    net.steps.push({step:state.tool.step,faces:document.querySelectorAll(".cube-face").length});
+  }
+  net.numbers=[...document.querySelectorAll(".cube-face-number")].map(node=>node.textContent).sort().join(",");
+  net.summary=document.getElementById("liveSummary").textContent;
+
   choose(3,"shape","symmetryLab");
   const beforeCells=state.tool.cells.length;
   document.querySelector(".mirror-cell.left").click();
-  const symmetry={before:beforeCells,after:state.tool.cells.length,mirrors:document.querySelectorAll(".mirror-cell.mirrored").length};
+  const symmetry={before:beforeCells,after:state.tool.cells.length,mirrors:document.querySelectorAll(".mirror-cell.mirrored").length,axis:document.querySelector(".symmetry-axis-label")?.textContent};
 
   choose(4,"line","angleLab");
-  document.getElementById("angleRange").value="90";
-  document.getElementById("angleRange").dispatchEvent(new Event("input",{bubbles:true}));
-  const angle={value:state.tool.angle,summary:document.getElementById("liveSummary").textContent};
+  const angle={initial:state.tool.angle,step:document.getElementById("angleRange").step};
+  document.getElementById("anglePlus1").click();
+  document.getElementById("anglePlus1").click();
+  document.getElementById("angleMinus1").click();
+  angle.oneDegree=state.tool.angle;
+  const board=document.getElementById("angleBoard");
+  const handle=document.getElementById("angleHandle");
+  const rect=board.getBoundingClientRect();
+  const wanted=37*Math.PI/180;
+  const clientX=rect.left+(250+Math.cos(wanted)*155)/500*rect.width;
+  const clientY=rect.top+(225-Math.sin(wanted)*155)/260*rect.height;
+  handle.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,clientX:rect.left+rect.width*.81,clientY:rect.top+rect.height*.865}));
+  window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,clientX,clientY}));
+  window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,clientX,clientY}));
+  angle.dragValue=state.tool.angle;
+  angle.diagram=document.querySelector(".angle-value-label")?.textContent;
+  angle.summary=document.getElementById("liveSummary").textContent;
 
   choose(4,"line","lineLab");
+  const lineDefaults={a:state.tool.angleA,b:state.tool.angleB};
   document.getElementById("snapPerpendicular").click();
-  const perpendicular={difference:Math.abs(state.tool.angleB-state.tool.angleA)%180,summary:document.getElementById("liveSummary").textContent};
+  const perpendicular={...lineDefaults,difference:Math.abs(state.tool.angleB-state.tool.angleA)%180,summary:document.getElementById("liveSummary").textContent,labels:document.querySelectorAll(".line-lab-svg .diagram-label").length};
 
   choose(4,"measure","areaLab");
   document.querySelector("[data-area-shape=triangle]").click();
@@ -146,9 +176,10 @@ const interactions = await evaluate(`(() => {
   const polygon={sides:state.tool.sides,summary:document.getElementById("liveSummary").textContent};
 
   choose(6,"shape","circleLab");
+  const circleDefault=state.tool.draw;
   document.getElementById("circleRadius").value="70";
   document.getElementById("circleRadius").dispatchEvent(new Event("input",{bubbles:true}));
-  const circle={radius:state.tool.radius,summary:document.getElementById("liveSummary").textContent};
+  const circle={defaultDraw:circleDefault,radius:state.tool.radius,summary:document.getElementById("liveSummary").textContent,labels:[...document.querySelectorAll(".circle-wrap .diagram-label")].map(node=>node.textContent).join("|")};
 
   choose(5,"measure","compositeArea");
   document.getElementById("teacherButton").click();
@@ -160,17 +191,19 @@ const interactions = await evaluate(`(() => {
   document.querySelector("[data-lang=zh]").click();
   const zh={lang:document.documentElement.lang,title:document.querySelector("h1").textContent,overflow:document.documentElement.scrollWidth-window.innerWidth};
 
-  return {draw,symmetry,angle,perpendicular,area,volume,polygon,circle,teacher,zh};
+  return {draw,shapeDefaults,net,symmetry,angle,perpendicular,area,volume,polygon,circle,teacher,zh};
 })()`);
 
 if (!interactions.draw.closed || interactions.draw.points < 3) throw new Error("Drawing board failed.");
-if (interactions.symmetry.before === interactions.symmetry.after || interactions.symmetry.mirrors < 0) throw new Error("Symmetry board failed.");
-if (interactions.angle.value !== 90 || !interactions.angle.summary.includes("90")) throw new Error("Angle lab failed.");
-if (interactions.perpendicular.difference !== 90) throw new Error("Line lab failed.");
+if (interactions.shapeDefaults.rotation !== 0 || interactions.shapeDefaults.pyramidLabels < 4) throw new Error("Shape defaults or labels failed.");
+if (interactions.net.initialStep !== 0 || interactions.net.steps.map(item=>item.faces).join(",") !== "2,3,4,5,6" || interactions.net.numbers !== "1,2,3,4,5,6" || !interactions.net.summary.includes("6")) throw new Error("Step-by-step cube net failed: " + JSON.stringify(interactions.net));
+if (interactions.symmetry.before === interactions.symmetry.after || interactions.symmetry.mirrors < 0 || !interactions.symmetry.axis) throw new Error("Symmetry board failed.");
+if (interactions.angle.initial !== 0 || interactions.angle.step !== "1" || interactions.angle.oneDegree !== 1 || interactions.angle.dragValue !== 37 || interactions.angle.diagram !== "37°" || !interactions.angle.summary.includes("37")) throw new Error("Angle lab failed: " + JSON.stringify(interactions.angle));
+if (interactions.perpendicular.a !== 0 || interactions.perpendicular.b !== 0 || interactions.perpendicular.difference !== 90 || interactions.perpendicular.labels < 2) throw new Error("Line lab failed: " + JSON.stringify(interactions.perpendicular));
 if (interactions.area.shape !== "triangle" || !interactions.area.summary.includes("20")) throw new Error("Area board failed.");
 if (interactions.volume.cubes !== 30 || !interactions.volume.summary.includes("30")) throw new Error("Volume board failed.");
 if (interactions.polygon.sides !== 8 || !interactions.polygon.summary.includes("1080")) throw new Error("Polygon lab failed.");
-if (interactions.circle.radius !== 70 || !interactions.circle.summary.includes("140")) throw new Error("Circle lab failed.");
+if (interactions.circle.defaultDraw !== 0 || interactions.circle.radius !== 70 || !interactions.circle.summary.includes("140") || !interactions.circle.labels.includes("r = 70") || !interactions.circle.labels.includes("d = 140")) throw new Error("Circle lab failed.");
 if (interactions.teacher.open || interactions.teacher.width !== 10) throw new Error("Teacher settings failed.");
 if (interactions.zh.lang !== "zh-Hans" || !interactions.zh.title.includes("几何") || interactions.zh.overflow > 1) throw new Error("Chinese UI failed.");
 if (runtimeErrors.length) throw new Error("Runtime errors: " + runtimeErrors.join(" | "));

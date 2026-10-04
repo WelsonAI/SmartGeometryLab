@@ -156,6 +156,21 @@ select, input {
 .challenge-kicker { color: #8b5c17; font-size: 14px; }
 .challenge-text { color: var(--green); font-size: clamp(26px, 3vw, 41px); font-weight: 800; line-height: 1.15; }
 .challenge-sub { color: #795524; font-size: 15px; }
+.tool-guide {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 13px;
+  padding: 11px 14px;
+  border: 2px solid #e6bd60;
+  border-radius: 16px;
+  background: #fff6d9;
+}
+.tool-guide-title { color: #7a5016; font-weight: 900; white-space: nowrap; }
+.tool-guide-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tool-guide-step { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 7px 9px; border-radius: 10px; background: rgba(255,255,255,.78); font-size: 14px; line-height: 1.25; }
+.tool-guide-step b { display: grid; flex: 0 0 auto; place-items: center; width: 25px; height: 25px; border: 1.5px solid var(--line); border-radius: 50%; background: var(--yellow-2); color: #34220c; }
 .visual-stage {
   position: relative;
   display: grid;
@@ -211,6 +226,18 @@ select, input {
 .measure-line { fill: none; stroke: #0d806b; stroke-width: 5; stroke-linecap: round; }
 .point-handle { fill: #ffbd3f; stroke: #6d4a1e; stroke-width: 4; cursor: grab; }
 .point-handle:active { cursor: grabbing; }
+.angle-handle { animation: handlePulse 1.5s ease-in-out infinite; }
+.drag-label rect { fill: #fff7d8; stroke: #8a5b16; stroke-width: 1.5; }
+.drag-label text { fill: #7a5016; font-size: 13px; font-weight: 900; }
+.angle-value-label { fill: #075f4e !important; font-size: 22px; font-weight: 900; paint-order: stroke; stroke: #fffdf4; stroke-width: 5px; stroke-linejoin: round; }
+.diagram-label { fill: #3f2b14 !important; font-size: 14px; font-weight: 900; paint-order: stroke; stroke: #fffdf4; stroke-width: 5px; stroke-linejoin: round; }
+.diagram-label.accent { fill: #075f4e !important; }
+.dimension-line { stroke: #ba3f45; stroke-width: 2.5; marker-start: url(#arrow); marker-end: url(#arrow); }
+.dimension-guide { stroke: #9e8150; stroke-width: 1.5; stroke-dasharray: 5 4; }
+@keyframes handlePulse {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(255,189,63,0)); }
+  50% { filter: drop-shadow(0 0 8px rgba(255,148,0,.9)); }
+}
 .stage-stack { display: grid; place-items: center; gap: 14px; width: 100%; }
 
 /* Shape explorer */
@@ -225,6 +252,25 @@ select, input {
 .net-board { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 20px; width: min(720px, 100%); }
 .net-panel { display: grid; place-items: center; min-height: 255px; padding: 12px; border: 2px dashed #d4b67d; border-radius: 18px; background: rgba(255,255,255,.75); }
 .net-square { fill: #ffd778; stroke: #6d4a1e; stroke-width: 3; transition: all .3s ease; }
+.net-square.base { fill: #b9eadf; }
+.net-square.current { fill: #ffb8a8; stroke: #ba3f45; stroke-width: 5; }
+.net-square.folded { fill: #dff3ec; opacity: .38; stroke-dasharray: 6 4; }
+.net-square.folded.current { fill: #ffb8a8; opacity: 1; stroke: #ba3f45; stroke-width: 5; stroke-dasharray: none; }
+.panel-caption { align-self: start; min-width: 150px; padding: 5px 10px; border-radius: 10px; background: #fff4ce; color: #76501d; text-align: center; font-size: 14px; font-weight: 900; }
+.cube-assembly { min-height: 240px; }
+.cube-face { stroke: #6d4a1e; stroke-width: 3; stroke-linejoin: round; }
+.cube-face.face-1 { fill: #ffd778; }
+.cube-face.face-2 { fill: #8fd8c8; }
+.cube-face.face-3 { fill: #ffe7a8; }
+.cube-face.face-4 { fill: #b9a7ec; }
+.cube-face.face-5 { fill: #f4b2a5; opacity: .6; }
+.cube-face.face-6 { fill: #8fc8e8; opacity: .72; }
+.cube-face-number { fill: #3f2b14; font-family: var(--font); font-size: 20px; font-weight: 900; paint-order: stroke; stroke: white; stroke-width: 4px; }
+.cube-face-group.just-folded { transform-box: fill-box; transform-origin: center; animation: foldFaceIn .55s ease-out; }
+@keyframes foldFaceIn {
+  0% { opacity: 0; transform: translateY(35px) scale(.65) rotate(18deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
 .cube-preview { width: 170px; height: 170px; transform-style: preserve-3d; transform: rotateX(-20deg) rotateY(35deg); }
 .cube-preview svg { width: 100%; height: 100%; }
 
@@ -241,6 +287,8 @@ select, input {
 
 /* Symmetry */
 .symmetry-shell { display: grid; grid-template-columns: auto 210px; gap: 18px; align-items: center; width: min(740px, 100%); }
+.symmetry-board-wrap { position: relative; padding-top: 34px; }
+.symmetry-axis-label { position: absolute; top: 0; left: 50%; z-index: 2; transform: translateX(-50%); padding: 5px 10px; border: 2px solid #ba3f45; border-radius: 999px; background: #fff8e9; color: #8c2930; font-size: .78rem; font-weight: 900; white-space: nowrap; }
 .symmetry-board { --cells: 10; position: relative; display: grid; grid-template-columns: repeat(var(--cells), minmax(22px, 34px)); gap: 2px; padding: 8px; border: 2px solid #9f8150; border-radius: 14px; background: #fff; }
 .symmetry-board::after { content: ""; position: absolute; top: 7px; bottom: 7px; left: 50%; width: 3px; border-radius: 3px; background: #ba3f45; transform: translateX(-1px); pointer-events: none; }
 .mirror-cell { aspect-ratio: 1; min-width: 0; border: 1px solid #d9cfb9; border-radius: 4px; background: #fffaf0; }
@@ -320,6 +368,10 @@ select, input {
   .visual-stage { min-height: 310px; padding: 12px 7px; }
   .challenge-panel { min-height: 94px; padding: 12px; }
   .challenge-text { font-size: 27px; }
+  .tool-guide { grid-template-columns: 1fr; gap: 7px; padding: 10px; }
+  .tool-guide-title { text-align: center; }
+  .tool-guide-steps { grid-template-columns: 1fr; gap: 5px; }
+  .tool-guide-step { font-size: 13px; }
   .steps { gap: 5px; }
   .steps div { min-height: 54px; padding: 5px; font-size: 12px; flex-direction: column; gap: 1px; text-align: center; }
   .steps b { width: 24px; height: 24px; }
