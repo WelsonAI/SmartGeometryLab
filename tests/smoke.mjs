@@ -124,6 +124,13 @@ const interactions = await evaluate(`(() => {
   document.getElementById("toggleDrawSolid").click();
   Object.assign(draw,{solid:state.tool.solid,solidFaces:document.querySelectorAll("#drawnSolid3d .solid-face").length,solidLabels:document.querySelectorAll("#drawnSolid3d .solid-face-label").length,viewY:state.tool.viewY,overflow:document.documentElement.scrollWidth-window.innerWidth});
   const drawnSolid=document.getElementById("drawnSolid3d");
+  const faceBeforeZoom=drawnSolid.querySelector(".solid-face")?.getAttribute("points");
+  document.querySelector("[data-solid-zoom=in]").click();
+  Object.assign(draw,{zoom:state.tool.zoom,zoomLabel:document.querySelector(".solid-zoom-value")?.textContent,zoomChanged:drawnSolid.querySelector(".solid-face")?.getAttribute("points")!==faceBeforeZoom});
+  drawnSolid.dispatchEvent(new WheelEvent("wheel",{bubbles:true,cancelable:true,deltaY:-100}));
+  draw.wheelZoom=state.tool.zoom;
+  document.querySelector("[data-solid-zoom=reset]").click();
+  draw.zoomReset=state.tool.zoom;
   drawnSolid.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:22,clientX:170,clientY:120}));
   drawnSolid.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:22,clientX:230,clientY:145}));
   drawnSolid.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:22,clientX:230,clientY:145}));
@@ -163,10 +170,11 @@ const interactions = await evaluate(`(() => {
   shapeDefaults.planarVertices=document.querySelectorAll(".planar-vertex").length;
 
   choose(2,"shape","netBuilder");
-  const net={initialStep:state.tool.step,steps:[],shapeChoices:document.querySelectorAll("[data-net-shape]").length};
+  const net={initialStep:state.tool.step,steps:[],shapeChoices:document.querySelectorAll("[data-net-shape]").length,baseNumber:document.querySelector(".net-piece.base + .net-face-number")?.textContent};
   for(let i=0;i<5;i++){
     document.getElementById("nextFold").click();
     net.steps.push({step:state.tool.step,faces:document.querySelectorAll("#netFold3d .solid-face").length,active:document.querySelectorAll("#netFold3d .folding-face-group.active").length});
+    if(i===0) net.firstFoldNumber=document.querySelector("#netFold3d .folding-face-group.active .solid-face-label")?.textContent;
   }
   net.numbers=[...document.querySelectorAll("#netFold3d .solid-face-label")].map(node=>node.textContent).sort().join(",");
   net.viewY=state.tool.viewY;
@@ -185,6 +193,7 @@ const interactions = await evaluate(`(() => {
   document.getElementById("nextFold").click();
   net.cylinderLabels=document.querySelectorAll("#netFold3d .solid-face-label").length;
   document.querySelector("[data-net-shape=cuboid]").click();
+  net.cuboidBaseNumber=document.querySelector(".net-piece.base + .net-face-number")?.textContent;
   document.getElementById("nextFold").click();
   net.cuboidFaces=document.querySelectorAll("#netFold3d .solid-face").length;
 
@@ -326,10 +335,10 @@ const interactions = await evaluate(`(() => {
   return {draw,prism,shapeDefaults,net,symmetry,angle,perpendicular,triangleShape,perimeter,area,volume,polygon,circle,composite,teacher,ranges,zh};
 })()`);
 
-if (!interactions.draw.closed || interactions.draw.points !== 4 || interactions.draw.edgeLabels !== 4 || !interactions.draw.solid || interactions.draw.solidFaces !== 6 || interactions.draw.solidLabels !== 6 || interactions.draw.draggedViewY === interactions.draw.viewY || interactions.draw.overflow > 1) throw new Error("Flexible 2D-to-3D drawing board failed: " + JSON.stringify(interactions.draw));
+if (!interactions.draw.closed || interactions.draw.points !== 4 || interactions.draw.edgeLabels !== 4 || !interactions.draw.solid || interactions.draw.solidFaces !== 6 || interactions.draw.solidLabels !== 6 || interactions.draw.zoom !== 1.2 || interactions.draw.zoomLabel !== "120%" || !interactions.draw.zoomChanged || interactions.draw.wheelZoom !== 1.3 || interactions.draw.zoomReset !== 1 || interactions.draw.draggedViewY === interactions.draw.viewY || interactions.draw.overflow > 1) throw new Error("Flexible 2D-to-3D drawing board failed: " + JSON.stringify(interactions.draw));
 if (interactions.prism.faces !== 5 || interactions.prism.labels !== 5 || interactions.prism.draggedViewY === interactions.prism.viewY || interactions.prism.sides !== 5 || interactions.prism.fiveFaces !== 7 || interactions.prism.fiveEdges !== 15 || interactions.prism.overflow > 1) throw new Error("Draggable 3D prism failed: " + JSON.stringify(interactions.prism));
 if (interactions.shapeDefaults.rotation !== 0 || interactions.shapeDefaults.faces !== 6 || interactions.shapeDefaults.faceLabels !== 6 || interactions.shapeDefaults.draggedViewY === interactions.shapeDefaults.viewY || interactions.shapeDefaults.highlightedEdges !== 12 || interactions.shapeDefaults.highlightedVertices !== 8 || interactions.shapeDefaults.pyramidLabels !== 5 || interactions.shapeDefaults.sphereGrid < 10 || interactions.shapeDefaults.planarEdges !== 4 || interactions.shapeDefaults.planarEdgeLabels !== "1,2,3,4" || interactions.shapeDefaults.planarVertices !== 4) throw new Error("Interactive shape explorer failed: " + JSON.stringify(interactions.shapeDefaults));
-if (interactions.net.initialStep !== 0 || interactions.net.shapeChoices !== 4 || interactions.net.steps.map(item=>item.faces).join(",") !== "6,6,6,6,6" || interactions.net.steps.some(item=>item.active !== 1) || interactions.net.numbers !== "1,2,3,4,5,6" || interactions.net.draggedViewY === interactions.net.viewY || !interactions.net.summary.includes("6") || interactions.net.pyramidFaces !== 5 || interactions.net.pyramidMax !== "4" || interactions.net.cylinderFlatPieces !== 3 || interactions.net.cylinderLabels !== 3 || interactions.net.cuboidFaces !== 6) throw new Error("Step-by-step connected net failed: " + JSON.stringify(interactions.net));
+if (interactions.net.initialStep !== 0 || interactions.net.baseNumber !== "1" || interactions.net.firstFoldNumber !== "3" || interactions.net.shapeChoices !== 4 || interactions.net.steps.map(item=>item.faces).join(",") !== "6,6,6,6,6" || interactions.net.steps.some(item=>item.active !== 1) || interactions.net.numbers !== "1,2,3,4,5,6" || interactions.net.draggedViewY === interactions.net.viewY || !interactions.net.summary.includes("6") || interactions.net.pyramidFaces !== 5 || interactions.net.pyramidMax !== "4" || interactions.net.cylinderFlatPieces !== 3 || interactions.net.cylinderLabels !== 3 || interactions.net.cuboidBaseNumber !== "1" || interactions.net.cuboidFaces !== 6) throw new Error("Step-by-step connected net failed: " + JSON.stringify(interactions.net));
 if (interactions.symmetry.source !== interactions.symmetry.mirrors || interactions.symmetry.source < 1 || interactions.symmetry.beforeX === interactions.symmetry.afterX || Math.abs(interactions.symmetry.afterX + interactions.symmetry.mirrorX - 600) > .01 || interactions.symmetry.before === interactions.symmetry.after || interactions.symmetry.gridMirrors < 1 || !interactions.symmetry.axis || interactions.symmetry.axisOffset > 2) throw new Error("Symmetry board failed: " + JSON.stringify(interactions.symmetry));
 if (interactions.angle.initial !== 0 || interactions.angle.step !== "1" || interactions.angle.oneDegree !== 1 || interactions.angle.dragValue !== 37 || interactions.angle.diagram !== "37°" || !interactions.angle.summary.includes("37")) throw new Error("Angle lab failed: " + JSON.stringify(interactions.angle));
 if (interactions.perpendicular.a !== 0 || interactions.perpendicular.b !== 0 || interactions.perpendicular.draggedA !== 33 || interactions.perpendicular.difference !== 90 || interactions.perpendicular.labels < 2) throw new Error("Line lab failed: " + JSON.stringify(interactions.perpendicular));

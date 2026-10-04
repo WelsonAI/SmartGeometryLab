@@ -250,8 +250,8 @@ const NETS = [
 ];
 
 const NET_SOLIDS = [
-  { id: "cube", base: 3, foldOrder: [1,2,4,5,6] },
-  { id: "cuboid", base: 3, foldOrder: [1,2,4,5,6] },
+  { id: "cube", base: 1, foldOrder: [3,2,4,5,6] },
+  { id: "cuboid", base: 1, foldOrder: [3,2,4,5,6] },
   { id: "pyramid", base: 5, foldOrder: [1,2,3,4] },
   { id: "cylinder", base: 2, foldOrder: [1,3] }
 ];
@@ -621,15 +621,17 @@ function rotateSolidPoint(point, viewX, viewY) {
   return [point[0] * cosY + z1 * sinY, y1, -point[0] * sinY + z1 * cosY];
 }
 
-function projectSolidPoint(point) {
-  const scale = 330 / (4.4 - point[2]);
+function projectSolidPoint(point, zoom = 1) {
+  const scale = 330 * zoom / (4.4 - point[2]);
   return [210 + point[0] * scale, 150 - point[1] * scale];
 }
 
 function sphereSvgContent(t, property) {
+  const zoom = clamp(Number(t.zoom) || 1, .7, 1.35);
+  const sphereRadius = 103 * zoom;
   const paths = [];
   const makeLine = points => points.map((point, index) => {
-    const projected = projectSolidPoint(rotateSolidPoint(point, t.viewX, t.viewY));
+    const projected = projectSolidPoint(rotateSolidPoint(point, t.viewX, t.viewY), zoom);
     return (index ? "L" : "M") + projected[0].toFixed(1) + " " + projected[1].toFixed(1);
   }).join(" ");
   for (let latitude = -60; latitude <= 60; latitude += 30) {
@@ -646,8 +648,8 @@ function sphereSvgContent(t, property) {
       return [Math.cos(angle) * Math.cos(lon), Math.sin(angle), Math.cos(angle) * Math.sin(lon)];
     })));
   }
-  return "<defs><radialGradient id=\"solidSphere\" cx=\"34%\" cy=\"28%\"><stop offset=\"0\" stop-color=\"#fff4bc\"/><stop offset=\".58\" stop-color=\"#ffd778\"/><stop offset=\"1\" stop-color=\"#df9626\"/></radialGradient><clipPath id=\"sphereClip\"><circle cx=\"210\" cy=\"150\" r=\"101\"/></clipPath></defs>" +
-    "<circle class=\"solid-sphere" + (property === 0 ? " feature-active" : "") + "\" cx=\"210\" cy=\"150\" r=\"103\" fill=\"url(#solidSphere)\"/>" +
+  return "<defs><radialGradient id=\"solidSphere\" cx=\"34%\" cy=\"28%\"><stop offset=\"0\" stop-color=\"#fff4bc\"/><stop offset=\".58\" stop-color=\"#ffd778\"/><stop offset=\"1\" stop-color=\"#df9626\"/></radialGradient><clipPath id=\"sphereClip\"><circle cx=\"210\" cy=\"150\" r=\"" + (sphereRadius - 2).toFixed(1) + "\"/></clipPath></defs>" +
+    "<circle class=\"solid-sphere" + (property === 0 ? " feature-active" : "") + "\" cx=\"210\" cy=\"150\" r=\"" + sphereRadius.toFixed(1) + "\" fill=\"url(#solidSphere)\"/>" +
     "<g clip-path=\"url(#sphereClip)\">" + paths.map(path => "<path class=\"sphere-grid\" d=\"" + path + "\"/>").join("") + "</g>" +
     (property === 0 ? "<text class=\"solid-face-label\" x=\"210\" y=\"156\" text-anchor=\"middle\">1</text>" : "");
 }
@@ -657,7 +659,8 @@ function solidSvgContent(shape, t, options = {}) {
   if (shape.id === "sphere") return sphereSvgContent(t, property);
   const model = options.model || solidModel(shape.id);
   const transformed = model.vertices.map(point => rotateSolidPoint(point, t.viewX, t.viewY));
-  const projected = transformed.map(projectSolidPoint);
+  const zoom = clamp(Number(t.zoom) || 1, .7, 2.2);
+  const projected = transformed.map(point => projectSolidPoint(point, zoom));
   const allowed = options.visibleFaces ? new Set(options.visibleFaces) : null;
   const faces = model.faces.filter(face => !allowed || allowed.has(face.id)).map((face, index) => ({
     ...face,
@@ -697,17 +700,31 @@ function solidSvgContent(shape, t, options = {}) {
 }
 
 function solid3dMarkup(id, shape, t, options = {}) {
-  return "<div class=\"solid-3d-scene\"><svg id=\"" + id + "\" class=\"solid-3d-svg\" viewBox=\"0 0 420 300\" tabindex=\"0\" role=\"img\" aria-label=\"" + loc(ml("Model 3D boleh diputar", "可旋转的 3D 模型", "Rotatable 3D model")) + "\">" + solidSvgContent(shape, t, options) + "</svg><div class=\"solid-drag-hint\">🖐 " + loc(ml("Seret untuk putar 360°", "拖动可 360° 旋转", "Drag to rotate 360°")) + "</div></div>";
+  const zoomMax = shape.id === "sphere" ? 1.35 : 2.2;
+  const zoom = clamp(Number(t.zoom) || 1, .7, zoomMax);
+  const zoomControls = options.zoomControls === false ? "" : "<div class=\"solid-zoom-controls\" aria-label=\"" + loc(ml("Kawalan zum", "缩放控制", "Zoom controls")) + "\"><button type=\"button\" data-solid-zoom=\"out\" aria-label=\"" + loc(ml("Zum keluar", "缩小", "Zoom out")) + "\">−</button><button type=\"button\" class=\"solid-zoom-value\" data-solid-zoom=\"reset\" aria-label=\"" + loc(ml("Tetapkan zum 100 peratus", "恢复 100%", "Reset zoom to 100 percent")) + "\">" + Math.round(zoom * 100) + "%</button><button type=\"button\" data-solid-zoom=\"in\" aria-label=\"" + loc(ml("Zum masuk", "放大", "Zoom in")) + "\">＋</button></div>";
+  return "<div class=\"solid-3d-scene\">" + zoomControls + "<svg id=\"" + id + "\" class=\"solid-3d-svg\" viewBox=\"0 0 420 300\" tabindex=\"0\" role=\"img\" aria-label=\"" + loc(ml("Model 3D boleh diputar dan dizum", "可旋转和缩放的 3D 模型", "Rotatable and zoomable 3D model")) + "\">" + solidSvgContent(shape, t, options) + "</svg><div class=\"solid-drag-hint\">🖐 " + loc(ml("Seret untuk putar · roda tetikus untuk zum", "拖动旋转 · 滚轮缩放", "Drag to rotate · wheel to zoom")) + "</div></div>";
 }
 
 function bindSolidDrag(id, shape, t, options = {}) {
   const svg = document.querySelector("#" + id);
   if (!svg) return;
+  const zoomMax = shape.id === "sphere" ? 1.35 : 2.2;
+  t.zoom = clamp(Number(t.zoom) || 1, .7, zoomMax);
   let dragging = false;
   let moved = false;
   let lastX = 0;
   let lastY = 0;
-  const redraw = () => { svg.innerHTML = solidSvgContent(shape, t, options); };
+  const scene = svg.closest(".solid-3d-scene");
+  const redraw = () => {
+    svg.innerHTML = solidSvgContent(shape, t, options);
+    const value = scene?.querySelector(".solid-zoom-value");
+    if (value) value.textContent = Math.round(t.zoom * 100) + "%";
+  };
+  const setZoom = value => {
+    t.zoom = clamp(Math.round(value * 10) / 10, .7, zoomMax);
+    redraw();
+  };
   svg.addEventListener("pointerdown", event => {
     dragging = true;
     moved = false;
@@ -737,6 +754,14 @@ function bindSolidDrag(id, shape, t, options = {}) {
   };
   svg.addEventListener("pointerup", stop);
   svg.addEventListener("pointercancel", stop);
+  svg.addEventListener("wheel", event => {
+    setZoom(t.zoom + (event.deltaY < 0 ? .1 : -.1));
+    event.preventDefault();
+  }, { passive: false });
+  scene?.querySelectorAll("[data-solid-zoom]").forEach(button => button.addEventListener("click", () => {
+    if (button.dataset.solidZoom === "reset") setZoom(1);
+    else setZoom(t.zoom + (button.dataset.solidZoom === "in" ? .2 : -.2));
+  }));
   svg.addEventListener("click", event => {
     if (moved || !options.faceClickable) return;
     const face = event.target.closest?.("[data-solid-face]");
@@ -748,6 +773,9 @@ function bindSolidDrag(id, shape, t, options = {}) {
   svg.addEventListener("keydown", event => {
     const moves = { ArrowLeft: [0,-5], ArrowRight: [0,5], ArrowUp: [5,0], ArrowDown: [-5,0] };
     if (event.key === "Home") { t.viewX = -18; t.viewY = 30; }
+    else if (event.key === "+" || event.key === "=") { setZoom(t.zoom + .1); event.preventDefault(); return; }
+    else if (event.key === "-" || event.key === "_") { setZoom(t.zoom - .1); event.preventDefault(); return; }
+    else if (event.key === "0") { setZoom(1); event.preventDefault(); return; }
     else if (moves[event.key]) { t.viewX = clamp(t.viewX + moves[event.key][0], -82, 82); t.viewY = (t.viewY + moves[event.key][1]) % 360; }
     else return;
     redraw();
@@ -800,13 +828,14 @@ function renderShapeExplorer() {
     t.selectedFace = null;
     t.viewX = -18;
     t.viewY = 30;
+    t.zoom = 1;
     renderTool();
   }));
   document.querySelectorAll("[data-property]").forEach(button => button.addEventListener("click", () => { t.property = Number(button.dataset.property); t.selectedFace = null; renderTool(); }));
   const rotation = document.querySelector("#shapeRotation");
   if (rotation) rotation.addEventListener("input", event => { t.rotation = Number(event.target.value); renderTool(); });
   const resetView = document.querySelector("#reset3dView");
-  if (resetView) resetView.addEventListener("click", () => { t.viewX = -18; t.viewY = 30; renderTool(); });
+  if (resetView) resetView.addEventListener("click", () => { t.viewX = -18; t.viewY = 30; t.zoom = 1; renderTool(); });
   if (shape.kind === "3d") bindSolidDrag("shapeSolid3d", shape, t, { property: t.property, selectedFace: t.selectedFace, faceClickable: true });
   document.querySelector("#randomExample").addEventListener("click", randomizeCurrent);
 }
@@ -827,17 +856,19 @@ function flatNetMarkup(t, definition, foldedFaces, currentFace) {
   const cls = face => netPieceClass(face, definition.base, foldedFaces, currentFace);
   if (definition.id === "cube") {
     const cells = NETS[t.net % NETS.length];
+    const faceIds = [3,2,1,4,5,6];
     const minX = Math.min(...cells.map(cell => cell[0]));
     const minY = Math.min(...cells.map(cell => cell[1]));
     return cells.map((cell, index) => {
+      const face = faceIds[index];
       const x = 35 + (cell[0] - minX) * 55;
       const y = 20 + (cell[1] - minY) * 55;
-      return "<rect class=\"" + cls(index + 1) + "\" x=\"" + x + "\" y=\"" + y + "\" width=\"54\" height=\"54\" rx=\"4\"/>" + netLabel(index + 1, x + 27, y + 32);
+      return "<rect class=\"" + cls(face) + "\" x=\"" + x + "\" y=\"" + y + "\" width=\"54\" height=\"54\" rx=\"4\"/>" + netLabel(face, x + 27, y + 32);
     }).join("");
   }
   if (definition.id === "cuboid") {
     const pieces = [
-      [1,100,45,80,45], [2,55,90,45,60], [3,100,90,80,60],
+      [3,100,45,80,45], [2,55,90,45,60], [1,100,90,80,60],
       [4,180,90,45,60], [5,225,90,80,60], [6,100,150,80,45]
     ];
     return pieces.map(piece => "<rect class=\"" + cls(piece[0]) + "\" x=\"" + piece[1] + "\" y=\"" + piece[2] + "\" width=\"" + piece[3] + "\" height=\"" + piece[4] + "\" rx=\"4\"/>" + netLabel(piece[0], piece[1] + piece[3] / 2, piece[2] + piece[4] / 2 + 5)).join("");
@@ -889,12 +920,12 @@ function foldingFaces(id) {
   return {
     centre: [width / 2, depth / 2], scale: id === "cuboid" ? 84 : 98,
     faces: [
-      { id: 3, points: [[0,0,0],[width,0,0],[width,depth,0],[0,depth,0]] },
-      { id: 1, parent: 3, hinge: [[0,0,0],[width,0,0]], fold: -90, points: [[0,-height,0],[width,-height,0],[width,0,0],[0,0,0]] },
-      { id: 2, parent: 3, hinge: [[0,0,0],[0,depth,0]], fold: 90, points: [[-height,0,0],[0,0,0],[0,depth,0],[-height,depth,0]] },
-      { id: 4, parent: 3, hinge: [[width,0,0],[width,depth,0]], fold: -90, points: [[width,0,0],[width+height,0,0],[width+height,depth,0],[width,depth,0]] },
+      { id: 1, points: [[0,0,0],[width,0,0],[width,depth,0],[0,depth,0]] },
+      { id: 3, parent: 1, hinge: [[0,0,0],[width,0,0]], fold: -90, points: [[0,-height,0],[width,-height,0],[width,0,0],[0,0,0]] },
+      { id: 2, parent: 1, hinge: [[0,0,0],[0,depth,0]], fold: 90, points: [[-height,0,0],[0,0,0],[0,depth,0],[-height,depth,0]] },
+      { id: 4, parent: 1, hinge: [[width,0,0],[width,depth,0]], fold: -90, points: [[width,0,0],[width+height,0,0],[width+height,depth,0],[width,depth,0]] },
       { id: 5, parent: 4, hinge: [[width+height,0,0],[width+height,depth,0]], fold: -90, points: [[width+height,0,0],[width+height+width,0,0],[width+height+width,depth,0],[width+height,depth,0]] },
-      { id: 6, parent: 3, hinge: [[0,depth,0],[width,depth,0]], fold: 90, points: [[0,depth,0],[width,depth,0],[width,depth+height,0],[0,depth+height,0]] }
+      { id: 6, parent: 1, hinge: [[0,depth,0],[width,depth,0]], fold: 90, points: [[0,depth,0],[width,depth,0],[width,depth+height,0],[0,depth+height,0]] }
     ]
   };
 }
@@ -903,7 +934,7 @@ function foldingNetSvg(shape, definition, t) {
   if (shape.id === "cylinder") {
     if (t.step === 0) return "<div class=\"solid-3d-scene\"><svg id=\"netFold3d\" class=\"solid-3d-svg net-fold-svg\" viewBox=\"0 0 310 260\">" + flatNetMarkup(t, definition, new Set(), definition.foldOrder[0]) + "</svg><div class=\"solid-drag-hint\">" + loc(ml("Bentangan lengkap masih bersambung", "完整展开图保持连接", "The complete net stays connected")) + "</div></div>";
     const visibleFaces = t.step === 1 ? [2,1] : [2,1,3];
-    return solid3dMarkup("netFold3d", shape, t, { property: 0, visibleFaces, alwaysLabels: true });
+    return solid3dMarkup("netFold3d", shape, t, { property: 0, visibleFaces, alwaysLabels: true, zoomControls: false });
   }
   const setup = foldingFaces(shape.id);
   const displayScale = setup.scale * (1 + .25 * t.step / Math.max(1, definition.foldOrder.length));

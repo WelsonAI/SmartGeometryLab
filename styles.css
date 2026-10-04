@@ -253,6 +253,10 @@ select, input {
 .solid-3d-svg { width: min(440px, 100%); height: 285px; cursor: grab; touch-action: none; user-select: none; outline: none; }
 .solid-3d-svg.dragging { cursor: grabbing; }
 .solid-3d-svg:focus-visible { filter: drop-shadow(0 0 5px #0d806b); }
+.solid-zoom-controls { position: absolute; top: 9px; right: 9px; z-index: 3; display: flex; align-items: center; gap: 4px; padding: 4px; border: 1.5px solid #b99455; border-radius: 12px; background: rgba(255,253,248,.96); box-shadow: 0 2px 7px rgba(83,55,17,.14); }
+.solid-zoom-controls button { display: grid; place-items: center; min-width: 38px; height: 36px; padding: 0 8px; border: 1px solid #d6bd88; border-radius: 8px; background: #fff; color: var(--green); font: inherit; font-weight: 900; line-height: 1; cursor: pointer; }
+.solid-zoom-controls button:hover, .solid-zoom-controls button:focus-visible { border-color: var(--green-2); background: var(--mint); outline: none; }
+.solid-zoom-controls .solid-zoom-value { min-width: 60px; font-size: 13px; }
 .solid-face { fill: #e7dbc2; fill-opacity: .72; stroke: #6d4a1e; stroke-width: 2.5; stroke-linejoin: round; transition: fill .15s ease, fill-opacity .15s ease; }
 .solid-face.curved-piece { stroke-width: .7; }
 .solid-face.face-1 { fill: #ffd778; }
@@ -484,6 +488,9 @@ select, input {
   .symmetry-board { grid-template-columns: repeat(var(--cells), 28px); }
   .symmetry-legend { grid-template-columns: 1fr; }
   .choice-chip { padding: 7px 10px; }
+  .solid-zoom-controls { top: 6px; right: 6px; }
+  .solid-zoom-controls button { min-width: 34px; height: 34px; padding: 0 6px; }
+  .solid-zoom-controls .solid-zoom-value { min-width: 54px; }
   .draw-board { min-height: 245px; }
   .dialog-actions { flex-direction: column-reverse; }
   .dialog-actions button { width: 100%; }

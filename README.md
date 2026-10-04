@@ -14,10 +14,10 @@ This is a classroom tool, not a question-and-answer exercise site. Learners move
 - Three visible usage steps for every tool
 - Values and face numbers labelled directly on diagrams
 - Angle and rotation tools begin at 0°; angle rays support 1° adjustment
-- Solid models can be dragged directly in true 3D; numbered faces, colour-coded numbered edges and numbered vertices remain identifiable while rotating
+- Solid models can be dragged directly in true 3D and zoomed with visible controls or the mouse wheel; numbered faces, colour-coded numbered edges and numbered vertices remain identifiable while rotating
 - The point-grid drawing board accepts individual clicks or a continuous drag across grid points, then extrudes any closed outline into a draggable 3D solid
 - The Year 3 prism lab uses a draggable 3D model whose base sides and depth can be changed independently
-- Cube, cuboid, pyramid and cylinder nets are available; polygonal nets keep every face connected while numbered faces fold along their shared edges
+- Cube, cuboid, pyramid and cylinder nets are available; cube and cuboid nets consistently use the central base as face 1, while every numbered face stays connected and folds along its shared edge
 - Symmetry offers draggable everyday shapes with a live mirror as well as the optional square-grid model
 - Triangle perimeter diagrams physically reshape when any side length changes
 - Unit-block length, width and height guides sit beside the matching rows, columns and layers
@@ -47,9 +47,9 @@ tests/smoke.mjs checks:
 
 - all 15 distinct tools and their Year 2–6 navigation
 - random examples and direct manipulation of solids, lines, rays, compass arms and sliders
-- click-or-drag point drawing, closed-outline 3D extrusion and the draggable Year 3 prism model
+- click-or-drag point drawing, closed-outline 3D extrusion, zoom controls and the draggable Year 3 prism model
 - 0° defaults, 1° protractor adjustment and continuous angle dragging
-- connected step-by-step cube, cuboid and pyramid folding into draggable 3D solids
+- connected step-by-step cube, cuboid and pyramid folding into draggable 3D solids, including face 1 as the cube/cuboid base
 - direct numbered labels on 2D sides and corners, 3D faces, edges and vertices
 - draggable stamp symmetry and the square-grid alternative
 - triangle reshaping, maximum-size area containment, correctly layered unit blocks and full-sphere surface grids
