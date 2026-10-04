@@ -14,7 +14,10 @@ This is a classroom tool, not a question-and-answer exercise site. Learners move
 - Three visible usage steps for every tool
 - Values and face numbers labelled directly on diagrams
 - Angle and rotation tools begin at 0°; angle rays support 1° adjustment
-- Cube nets fold one numbered face at a time into a matching 3D model
+- Solid models can be dragged directly in true 3D; face, edge and vertex cards highlight the matching parts
+- Cube nets fold one numbered face at a time into a matching draggable 3D model
+- Lines and the compass pencil can be dragged directly on their diagrams
+- Every range control remains continuously draggable while its diagram updates
 - Responsive desktop, tablet and mobile layout
 
 ## Textbook-aligned progression
@@ -36,11 +39,11 @@ Open index.html directly in a modern browser, or serve the directory with any st
 tests/smoke.mjs checks:
 
 - all 15 distinct tools and their Year 2–6 navigation
-- random and direct manipulation
+- random examples and direct manipulation of solids, lines, rays, compass arms and sliders
 - 0° defaults, 1° protractor adjustment and continuous angle dragging
-- numbered five-step cube-net folding
+- numbered five-step cube-net folding into a draggable 3D cube
 - direct labels on shapes, symmetry axes, dimensions, angles and circles
-- symmetry, line, area, volume, polygon and circle interactions
+- centred symmetry axes, visible perimeter labels, and line, area, volume, polygon and circle interactions
 - contextual teacher settings
 - three-language switching
 - absent listening controls

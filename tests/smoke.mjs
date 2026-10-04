@@ -115,23 +115,42 @@ const interactions = await evaluate(`(() => {
   const draw={closed:state.tool.closed,points:state.tool.points.length};
 
   choose(2,"shape","shapeExplorer");
-  const shapeDefaults={rotation:state.tool.rotation,pyramidLabels:0};
+  const shapeDefaults={rotation:state.tool.rotation,faces:document.querySelectorAll("#shapeSolid3d .solid-face").length,faceLabels:document.querySelectorAll("#shapeSolid3d .solid-face-label").length,viewY:state.tool.viewY,pyramidLabels:0};
+  const shapeSvg=document.getElementById("shapeSolid3d");
+  shapeSvg.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:11,clientX:180,clientY:130}));
+  shapeSvg.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:11,clientX:240,clientY:160}));
+  shapeSvg.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:11,clientX:240,clientY:160}));
+  shapeDefaults.draggedViewY=state.tool.viewY;
+  document.querySelector("[data-property='1']").click();
+  shapeDefaults.highlightedEdges=document.querySelectorAll("#shapeSolid3d .solid-edge.feature-active").length;
+  document.querySelector("[data-property='2']").click();
+  shapeDefaults.highlightedVertices=document.querySelectorAll("#shapeSolid3d .solid-vertex").length;
   document.querySelector("[data-shape=pyramid]").click();
-  shapeDefaults.pyramidLabels=document.querySelectorAll(".shape-picture .diagram-label").length;
+  shapeDefaults.pyramidLabels=document.querySelectorAll("#shapeSolid3d .solid-face-label").length;
 
   choose(2,"shape","netBuilder");
   const net={initialStep:state.tool.step,steps:[]};
   for(let i=0;i<5;i++){
     document.getElementById("nextFold").click();
-    net.steps.push({step:state.tool.step,faces:document.querySelectorAll(".cube-face").length});
+    net.steps.push({step:state.tool.step,faces:document.querySelectorAll("#netCube3d .solid-face").length});
   }
-  net.numbers=[...document.querySelectorAll(".cube-face-number")].map(node=>node.textContent).sort().join(",");
+  net.numbers=[...document.querySelectorAll("#netCube3d .solid-face-label")].map(node=>node.textContent).sort().join(",");
+  net.viewY=state.tool.viewY;
+  const netSvg=document.getElementById("netCube3d");
+  netSvg.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:12,clientX:180,clientY:130}));
+  netSvg.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:12,clientX:230,clientY:140}));
+  netSvg.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:12,clientX:230,clientY:140}));
+  net.draggedViewY=state.tool.viewY;
   net.summary=document.getElementById("liveSummary").textContent;
 
   choose(3,"shape","symmetryLab");
   const beforeCells=state.tool.cells.length;
   document.querySelector(".mirror-cell.left").click();
-  const symmetry={before:beforeCells,after:state.tool.cells.length,mirrors:document.querySelectorAll(".mirror-cell.mirrored").length,axis:document.querySelector(".symmetry-axis-label")?.textContent};
+  const symmetryBoard=document.querySelector(".symmetry-board");
+  const symmetryCells=[...document.querySelectorAll(".mirror-cell")].map(cell=>cell.getBoundingClientRect());
+  const symmetryRect=symmetryBoard.getBoundingClientRect();
+  const split=(symmetryCells[4].right+symmetryCells[5].left)/2;
+  const symmetry={before:beforeCells,after:state.tool.cells.length,mirrors:document.querySelectorAll(".mirror-cell.mirrored").length,axis:document.querySelector(".symmetry-axis-label")?.textContent,axisOffset:Math.abs(split-(symmetryRect.left+symmetryRect.width/2))};
 
   choose(4,"line","angleLab");
   const angle={initial:state.tool.angle,step:document.getElementById("angleRange").step};
@@ -154,8 +173,25 @@ const interactions = await evaluate(`(() => {
 
   choose(4,"line","lineLab");
   const lineDefaults={a:state.tool.angleA,b:state.tool.angleB};
+  const lineBoard=document.getElementById("lineBoard");
+  const lineRect=lineBoard.getBoundingClientRect();
+  const lineHandle=document.querySelector("[data-line-handle='A']");
+  const lineWanted=33*Math.PI/180;
+  const lineX=lineRect.left+(320+Math.cos(lineWanted)*230)/640*lineRect.width;
+  const lineY=lineRect.top+(150-Math.sin(lineWanted)*230)/300*lineRect.height;
+  lineHandle.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,clientX:lineRect.right-30,clientY:lineRect.top+lineRect.height/2}));
+  window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,clientX:lineX,clientY:lineY}));
+  window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,clientX:lineX,clientY:lineY}));
+  lineDefaults.draggedA=state.tool.angleA;
   document.getElementById("snapPerpendicular").click();
   const perpendicular={...lineDefaults,difference:Math.abs(state.tool.angleB-state.tool.angleA)%180,summary:document.getElementById("liveSummary").textContent,labels:document.querySelectorAll(".line-lab-svg .diagram-label").length};
+
+  choose(4,"measure","perimeterLab");
+  document.querySelector("[data-per-shape=square]").click();
+  const perimeterSvg=document.querySelector(".perimeter-svg");
+  const perimeterRect=perimeterSvg.getBoundingClientRect();
+  const perimeterLabels=[...perimeterSvg.querySelectorAll(".diagram-label")].map(node=>node.getBoundingClientRect());
+  const perimeter={labels:perimeterLabels.length,allVisible:perimeterLabels.every(rect=>rect.top>=perimeterRect.top-1&&rect.bottom<=perimeterRect.bottom+1&&rect.left>=perimeterRect.left-1&&rect.right<=perimeterRect.right+1)};
 
   choose(4,"measure","areaLab");
   document.querySelector("[data-area-shape=triangle]").click();
@@ -179,7 +215,16 @@ const interactions = await evaluate(`(() => {
   const circleDefault=state.tool.draw;
   document.getElementById("circleRadius").value="70";
   document.getElementById("circleRadius").dispatchEvent(new Event("input",{bubbles:true}));
-  const circle={defaultDraw:circleDefault,radius:state.tool.radius,summary:document.getElementById("liveSummary").textContent,labels:[...document.querySelectorAll(".circle-wrap .diagram-label")].map(node=>node.textContent).join("|")};
+  const circleBoard=document.getElementById("circleBoard");
+  const circleRect=circleBoard.getBoundingClientRect();
+  const circleHandle=document.getElementById("circleDragHandle");
+  const circleWanted=315*Math.PI/180;
+  const circleX=circleRect.left+(260+Math.cos(circleWanted)*70)/520*circleRect.width;
+  const circleY=circleRect.top+(155+Math.sin(circleWanted)*70)/315*circleRect.height;
+  circleHandle.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,clientX:circleRect.left+circleRect.width*.5,clientY:circleRect.top+circleRect.height*.5}));
+  window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,clientX:circleX,clientY:circleY}));
+  window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,clientX:circleX,clientY:circleY}));
+  const circle={defaultDraw:circleDefault,radius:state.tool.radius,draggedDraw:state.tool.draw,step:document.getElementById("circleDraw").step,summary:document.getElementById("liveSummary").textContent,labels:[...document.querySelectorAll(".circle-wrap .diagram-label")].map(node=>node.textContent).join("|"),centre:document.querySelector(".centre-label")?.textContent};
 
   choose(5,"measure","compositeArea");
   document.getElementById("teacherButton").click();
@@ -191,20 +236,31 @@ const interactions = await evaluate(`(() => {
   document.querySelector("[data-lang=zh]").click();
   const zh={lang:document.documentElement.lang,title:document.querySelector("h1").textContent,overflow:document.documentElement.scrollWidth-window.innerWidth};
 
-  return {draw,shapeDefaults,net,symmetry,angle,perpendicular,area,volume,polygon,circle,teacher,zh};
+  const dragRange=document.getElementById("compWidth");
+  const dragRangeRect=dragRange.getBoundingClientRect();
+  dragRange.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,clientX:dragRangeRect.left+dragRangeRect.width*.2,clientY:dragRangeRect.top+5}));
+  const afterRangeDown=state.tool.width;
+  window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,clientX:dragRangeRect.left+dragRangeRect.width*.8,clientY:dragRangeRect.top+5}));
+  window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,clientX:dragRangeRect.left+dragRangeRect.width*.8,clientY:dragRangeRect.top+5}));
+  const rangeStyle=getComputedStyle(document.getElementById("compWidth"));
+  const ranges={cursor:rangeStyle.cursor,touchAction:rangeStyle.touchAction,afterDown:afterRangeDown,afterMove:state.tool.width};
+
+  return {draw,shapeDefaults,net,symmetry,angle,perpendicular,perimeter,area,volume,polygon,circle,teacher,ranges,zh};
 })()`);
 
 if (!interactions.draw.closed || interactions.draw.points < 3) throw new Error("Drawing board failed.");
-if (interactions.shapeDefaults.rotation !== 0 || interactions.shapeDefaults.pyramidLabels < 4) throw new Error("Shape defaults or labels failed.");
-if (interactions.net.initialStep !== 0 || interactions.net.steps.map(item=>item.faces).join(",") !== "2,3,4,5,6" || interactions.net.numbers !== "1,2,3,4,5,6" || !interactions.net.summary.includes("6")) throw new Error("Step-by-step cube net failed: " + JSON.stringify(interactions.net));
-if (interactions.symmetry.before === interactions.symmetry.after || interactions.symmetry.mirrors < 0 || !interactions.symmetry.axis) throw new Error("Symmetry board failed.");
+if (interactions.shapeDefaults.rotation !== 0 || interactions.shapeDefaults.faces !== 6 || interactions.shapeDefaults.faceLabels !== 6 || interactions.shapeDefaults.draggedViewY === interactions.shapeDefaults.viewY || interactions.shapeDefaults.highlightedEdges !== 12 || interactions.shapeDefaults.highlightedVertices !== 8 || interactions.shapeDefaults.pyramidLabels !== 5) throw new Error("Interactive 3D shape explorer failed: " + JSON.stringify(interactions.shapeDefaults));
+if (interactions.net.initialStep !== 0 || interactions.net.steps.map(item=>item.faces).join(",") !== "2,3,4,5,6" || interactions.net.numbers !== "1,2,3,4,5,6" || interactions.net.draggedViewY === interactions.net.viewY || !interactions.net.summary.includes("6")) throw new Error("Step-by-step 3D cube net failed: " + JSON.stringify(interactions.net));
+if (interactions.symmetry.before === interactions.symmetry.after || interactions.symmetry.mirrors < 0 || !interactions.symmetry.axis || interactions.symmetry.axisOffset > 2) throw new Error("Symmetry board failed: " + JSON.stringify(interactions.symmetry));
 if (interactions.angle.initial !== 0 || interactions.angle.step !== "1" || interactions.angle.oneDegree !== 1 || interactions.angle.dragValue !== 37 || interactions.angle.diagram !== "37°" || !interactions.angle.summary.includes("37")) throw new Error("Angle lab failed: " + JSON.stringify(interactions.angle));
-if (interactions.perpendicular.a !== 0 || interactions.perpendicular.b !== 0 || interactions.perpendicular.difference !== 90 || interactions.perpendicular.labels < 2) throw new Error("Line lab failed: " + JSON.stringify(interactions.perpendicular));
+if (interactions.perpendicular.a !== 0 || interactions.perpendicular.b !== 0 || interactions.perpendicular.draggedA !== 33 || interactions.perpendicular.difference !== 90 || interactions.perpendicular.labels < 2) throw new Error("Line lab failed: " + JSON.stringify(interactions.perpendicular));
+if (interactions.perimeter.labels !== 4 || !interactions.perimeter.allVisible) throw new Error("Perimeter labels are clipped: " + JSON.stringify(interactions.perimeter));
 if (interactions.area.shape !== "triangle" || !interactions.area.summary.includes("20")) throw new Error("Area board failed.");
 if (interactions.volume.cubes !== 30 || !interactions.volume.summary.includes("30")) throw new Error("Volume board failed.");
 if (interactions.polygon.sides !== 8 || !interactions.polygon.summary.includes("1080")) throw new Error("Polygon lab failed.");
-if (interactions.circle.defaultDraw !== 0 || interactions.circle.radius !== 70 || !interactions.circle.summary.includes("140") || !interactions.circle.labels.includes("r = 70") || !interactions.circle.labels.includes("d = 140")) throw new Error("Circle lab failed.");
+if (interactions.circle.defaultDraw !== 0 || interactions.circle.radius !== 70 || interactions.circle.draggedDraw !== 315 || interactions.circle.step !== "1" || !interactions.circle.summary.includes("140") || !interactions.circle.labels.includes("r = 70") || !interactions.circle.labels.includes("d = 140") || !interactions.circle.centre.includes("O")) throw new Error("Circle lab failed: " + JSON.stringify(interactions.circle));
 if (interactions.teacher.open || interactions.teacher.width !== 10) throw new Error("Teacher settings failed.");
+if (interactions.ranges.cursor !== "ew-resize" || interactions.ranges.touchAction !== "none" || interactions.ranges.afterDown !== 7 || interactions.ranges.afterMove !== 11) throw new Error("Range controls are not freely draggable: " + JSON.stringify(interactions.ranges));
 if (interactions.zh.lang !== "zh-Hans" || !interactions.zh.title.includes("几何") || interactions.zh.overflow > 1) throw new Error("Chinese UI failed.");
 if (runtimeErrors.length) throw new Error("Runtime errors: " + runtimeErrors.join(" | "));
 
