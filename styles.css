@@ -332,9 +332,17 @@ select, input {
 .draw-wrap { display: grid; grid-template-columns: minmax(280px, 1fr) 190px; gap: 16px; width: min(760px, 100%); align-items: center; }
 .draw-board { width: 100%; min-height: 280px; border: 2px solid #bda475; border-radius: 17px; background: #fffef9; cursor: crosshair; touch-action: none; }
 .draw-help { padding: 14px; border-radius: 15px; background: #fff5d2; }
+.draw-edge-label, .draw-vertex-label { font-family: var(--font); font-weight: 900; paint-order: stroke; stroke: #fffef9; stroke-width: 5px; stroke-linejoin: round; pointer-events: none; }
+.draw-edge-label { fill: #075f4e; font-size: 13px; }
+.draw-vertex-label { fill: #9d1628; font-size: 13px; }
+.draw-solid-wrap { display: grid; place-items: center; gap: 12px; width: 100%; }
+.draw-solid-wrap .solid-3d-scene { width: min(720px, 100%); }
+.drawn-solid-label, .prism-face-label { font-size: 13px; }
+.drawn-solid-label.base-face-label, .prism-face-label.base-face-label { font-size: 16px; }
 
 /* Prism and pattern */
 .prism-wrap, .polygon-wrap, .circle-wrap { display: grid; place-items: center; gap: 12px; width: 100%; }
+.prism-3d-wrap .solid-3d-scene { width: min(720px, 100%); }
 .pattern-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; min-height: 105px; width: min(760px, 100%); padding: 14px; border: 2px dashed #d4b67d; border-radius: 18px; background: white; }
 .pattern-token { display: grid; place-items: center; width: 58px; height: 58px; border: 2px solid #8a6b3c; border-radius: 15px; background: var(--token-color, #ffd778); font-size: 30px; }
 .pattern-divider { width: 3px; height: 66px; border-radius: 2px; background: #bfa676; }

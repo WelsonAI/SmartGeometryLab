@@ -111,8 +111,35 @@ const interactions = await evaluate(`(() => {
   };
 
   choose(2,"shape","shapeDrawer");
-  document.getElementById("randomExample").click();
-  const draw={closed:state.tool.closed,points:state.tool.points.length};
+  const drawBoard=document.getElementById("drawBoard");
+  const drawRect=drawBoard.getBoundingClientRect();
+  const drawPoint=(x,y)=>({clientX:drawRect.left+x/400*drawRect.width,clientY:drawRect.top+y/300*drawRect.height});
+  const drawStart=drawPoint(20,20);
+  drawBoard.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:21,...drawStart}));
+  for(const point of [[100,20],[100,100],[20,100],[20,20]]){
+    window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:21,...drawPoint(...point)}));
+  }
+  window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:21,...drawStart}));
+  const draw={closed:state.tool.closed,points:state.tool.points.length,edgeLabels:document.querySelectorAll(".draw-edge-label").length};
+  document.getElementById("toggleDrawSolid").click();
+  Object.assign(draw,{solid:state.tool.solid,solidFaces:document.querySelectorAll("#drawnSolid3d .solid-face").length,solidLabels:document.querySelectorAll("#drawnSolid3d .solid-face-label").length,viewY:state.tool.viewY,overflow:document.documentElement.scrollWidth-window.innerWidth});
+  const drawnSolid=document.getElementById("drawnSolid3d");
+  drawnSolid.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:22,clientX:170,clientY:120}));
+  drawnSolid.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:22,clientX:230,clientY:145}));
+  drawnSolid.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:22,clientX:230,clientY:145}));
+  draw.draggedViewY=state.tool.viewY;
+
+  choose(3,"shape","prismLab");
+  const prism={faces:document.querySelectorAll("#prismSolid3d .solid-face").length,labels:document.querySelectorAll("#prismSolid3d .solid-face-label").length,viewY:state.tool.viewY};
+  const prismSvg=document.getElementById("prismSolid3d");
+  prismSvg.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:23,clientX:170,clientY:120}));
+  prismSvg.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:23,clientX:235,clientY:150}));
+  prismSvg.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:23,clientX:235,clientY:150}));
+  prism.draggedViewY=state.tool.viewY;
+  const prismSides=document.getElementById("prismSides");
+  prismSides.value="5";
+  prismSides.dispatchEvent(new Event("input",{bubbles:true}));
+  Object.assign(prism,{sides:state.tool.sides,fiveFaces:document.querySelectorAll("#prismSolid3d .solid-face").length,fiveEdges:document.querySelectorAll("#prismSolid3d .solid-edge").length,overflow:document.documentElement.scrollWidth-window.innerWidth});
 
   choose(2,"shape","shapeExplorer");
   const shapeDefaults={rotation:state.tool.rotation,faces:document.querySelectorAll("#shapeSolid3d .solid-face").length,faceLabels:document.querySelectorAll("#shapeSolid3d .solid-face-label").length,viewY:state.tool.viewY,pyramidLabels:0};
@@ -236,11 +263,21 @@ const interactions = await evaluate(`(() => {
   document.getElementById("areaHeight").value="5";
   document.getElementById("areaHeight").dispatchEvent(new Event("input",{bubbles:true}));
   const area={shape:state.tool.shape,summary:document.getElementById("liveSummary").textContent};
+  document.querySelector("[data-area-shape=square]").click();
+  document.getElementById("areaWidth").value="12";
+  document.getElementById("areaWidth").dispatchEvent(new Event("input",{bubbles:true}));
+  const maxSquare=document.querySelector(".area-board-svg > rect:last-of-type").getBBox();
+  Object.assign(area,{squareWidth:state.tool.width,squareHeight:state.tool.height,squareInside:maxSquare.x>=0&&maxSquare.y>=0&&maxSquare.x+maxSquare.width<=420&&maxSquare.y+maxSquare.height<=260});
+  document.querySelector("[data-area-shape=rectangle]").click();
+  Object.assign(area,{rectangleHeight:state.tool.height,heightMax:document.getElementById("areaHeight").max});
 
   choose(4,"measure","volumeLab");
   document.getElementById("volLength").value="5";
   document.getElementById("volLength").dispatchEvent(new Event("input",{bubbles:true}));
-  const volume={cubes:document.querySelectorAll(".iso-top").length,dimensions:document.querySelectorAll(".block-dimension").length,labels:[...document.querySelectorAll(".block-dimension text")].map(node=>node.textContent).join("|"),summary:document.getElementById("liveSummary").textContent};
+  const cubeOrder=[...document.querySelectorAll(".iso-cube")].map(node=>({x:Number(node.dataset.cubeX),y:Number(node.dataset.cubeY),z:Number(node.dataset.cubeZ)}));
+  const firstUpper=cubeOrder.findIndex(cube=>cube.z===1);
+  const upperLayer=cubeOrder.filter(cube=>cube.z===1);
+  const volume={cubes:document.querySelectorAll(".iso-top").length,dimensions:document.querySelectorAll(".block-dimension").length,labels:[...document.querySelectorAll(".block-dimension text")].map(node=>node.textContent).join("|"),summary:document.getElementById("liveSummary").textContent,lowerBeforeUpper:firstUpper>0&&cubeOrder.slice(firstUpper).every(cube=>cube.z===1),upperBlocks:upperLayer.length,upperSorted:upperLayer.every((cube,index)=>index===0||cube.x+cube.y>=upperLayer[index-1].x+upperLayer[index-1].y)};
 
   choose(6,"shape","polygonLab");
   document.getElementById("polySides").value="8";
@@ -263,6 +300,11 @@ const interactions = await evaluate(`(() => {
   const circle={defaultDraw:circleDefault,radius:state.tool.radius,draggedDraw:state.tool.draw,step:document.getElementById("circleDraw").step,summary:document.getElementById("liveSummary").textContent,labels:[...document.querySelectorAll(".circle-wrap .diagram-label")].map(node=>node.textContent).join("|"),centre:document.querySelector(".centre-label")?.textContent};
 
   choose(5,"measure","compositeArea");
+  document.getElementById("compWidth").value="12";
+  document.getElementById("compWidth").dispatchEvent(new Event("input",{bubbles:true}));
+  document.getElementById("cutWidth").value="11";
+  document.getElementById("cutWidth").dispatchEvent(new Event("input",{bubbles:true}));
+  const composite={outer:state.tool.width,cut:state.tool.cutWidth,cutMax:document.getElementById("cutWidth").max};
   document.getElementById("teacherButton").click();
   const first=document.getElementById("teacherField0");
   first.value="10";
@@ -281,10 +323,11 @@ const interactions = await evaluate(`(() => {
   const rangeStyle=getComputedStyle(document.getElementById("compWidth"));
   const ranges={cursor:rangeStyle.cursor,touchAction:rangeStyle.touchAction,afterDown:afterRangeDown,afterMove:state.tool.width};
 
-  return {draw,shapeDefaults,net,symmetry,angle,perpendicular,triangleShape,perimeter,area,volume,polygon,circle,teacher,ranges,zh};
+  return {draw,prism,shapeDefaults,net,symmetry,angle,perpendicular,triangleShape,perimeter,area,volume,polygon,circle,composite,teacher,ranges,zh};
 })()`);
 
-if (!interactions.draw.closed || interactions.draw.points < 3) throw new Error("Drawing board failed.");
+if (!interactions.draw.closed || interactions.draw.points !== 4 || interactions.draw.edgeLabels !== 4 || !interactions.draw.solid || interactions.draw.solidFaces !== 6 || interactions.draw.solidLabels !== 6 || interactions.draw.draggedViewY === interactions.draw.viewY || interactions.draw.overflow > 1) throw new Error("Flexible 2D-to-3D drawing board failed: " + JSON.stringify(interactions.draw));
+if (interactions.prism.faces !== 5 || interactions.prism.labels !== 5 || interactions.prism.draggedViewY === interactions.prism.viewY || interactions.prism.sides !== 5 || interactions.prism.fiveFaces !== 7 || interactions.prism.fiveEdges !== 15 || interactions.prism.overflow > 1) throw new Error("Draggable 3D prism failed: " + JSON.stringify(interactions.prism));
 if (interactions.shapeDefaults.rotation !== 0 || interactions.shapeDefaults.faces !== 6 || interactions.shapeDefaults.faceLabels !== 6 || interactions.shapeDefaults.draggedViewY === interactions.shapeDefaults.viewY || interactions.shapeDefaults.highlightedEdges !== 12 || interactions.shapeDefaults.highlightedVertices !== 8 || interactions.shapeDefaults.pyramidLabels !== 5 || interactions.shapeDefaults.sphereGrid < 10 || interactions.shapeDefaults.planarEdges !== 4 || interactions.shapeDefaults.planarEdgeLabels !== "1,2,3,4" || interactions.shapeDefaults.planarVertices !== 4) throw new Error("Interactive shape explorer failed: " + JSON.stringify(interactions.shapeDefaults));
 if (interactions.net.initialStep !== 0 || interactions.net.shapeChoices !== 4 || interactions.net.steps.map(item=>item.faces).join(",") !== "6,6,6,6,6" || interactions.net.steps.some(item=>item.active !== 1) || interactions.net.numbers !== "1,2,3,4,5,6" || interactions.net.draggedViewY === interactions.net.viewY || !interactions.net.summary.includes("6") || interactions.net.pyramidFaces !== 5 || interactions.net.pyramidMax !== "4" || interactions.net.cylinderFlatPieces !== 3 || interactions.net.cylinderLabels !== 3 || interactions.net.cuboidFaces !== 6) throw new Error("Step-by-step connected net failed: " + JSON.stringify(interactions.net));
 if (interactions.symmetry.source !== interactions.symmetry.mirrors || interactions.symmetry.source < 1 || interactions.symmetry.beforeX === interactions.symmetry.afterX || Math.abs(interactions.symmetry.afterX + interactions.symmetry.mirrorX - 600) > .01 || interactions.symmetry.before === interactions.symmetry.after || interactions.symmetry.gridMirrors < 1 || !interactions.symmetry.axis || interactions.symmetry.axisOffset > 2) throw new Error("Symmetry board failed: " + JSON.stringify(interactions.symmetry));
@@ -292,10 +335,11 @@ if (interactions.angle.initial !== 0 || interactions.angle.step !== "1" || inter
 if (interactions.perpendicular.a !== 0 || interactions.perpendicular.b !== 0 || interactions.perpendicular.draggedA !== 33 || interactions.perpendicular.difference !== 90 || interactions.perpendicular.labels < 2) throw new Error("Line lab failed: " + JSON.stringify(interactions.perpendicular));
 if (interactions.triangleShape.a !== 11 || interactions.triangleShape.before === interactions.triangleShape.after) throw new Error("Triangle did not reshape with its side lengths: " + JSON.stringify(interactions.triangleShape));
 if (interactions.perimeter.labels !== 4 || !interactions.perimeter.allVisible) throw new Error("Perimeter labels are clipped: " + JSON.stringify(interactions.perimeter));
-if (interactions.area.shape !== "triangle" || !interactions.area.summary.includes("20")) throw new Error("Area board failed.");
-if (interactions.volume.cubes !== 30 || interactions.volume.dimensions !== 3 || !interactions.volume.labels.includes("5") || !interactions.volume.summary.includes("30")) throw new Error("Volume board failed: " + JSON.stringify(interactions.volume));
+if (interactions.area.shape !== "triangle" || !interactions.area.summary.includes("20") || interactions.area.squareWidth !== 12 || interactions.area.squareHeight !== 12 || !interactions.area.squareInside || interactions.area.rectangleHeight !== 8 || interactions.area.heightMax !== "8") throw new Error("Area board failed: " + JSON.stringify(interactions.area));
+if (interactions.volume.cubes !== 30 || interactions.volume.dimensions !== 3 || !interactions.volume.labels.includes("5") || !interactions.volume.summary.includes("30") || !interactions.volume.lowerBeforeUpper || interactions.volume.upperBlocks !== 15 || !interactions.volume.upperSorted) throw new Error("Volume board failed: " + JSON.stringify(interactions.volume));
 if (interactions.polygon.sides !== 8 || !interactions.polygon.summary.includes("1080")) throw new Error("Polygon lab failed.");
 if (interactions.circle.defaultDraw !== 0 || interactions.circle.radius !== 70 || interactions.circle.draggedDraw !== 315 || interactions.circle.step !== "1" || !interactions.circle.summary.includes("140") || !interactions.circle.labels.includes("r = 70") || !interactions.circle.labels.includes("d = 140") || !interactions.circle.centre.includes("O")) throw new Error("Circle lab failed: " + JSON.stringify(interactions.circle));
+if (interactions.composite.outer !== 12 || interactions.composite.cut !== 11 || interactions.composite.cutMax !== "11") throw new Error("Composite cut-out width 11 failed: " + JSON.stringify(interactions.composite));
 if (interactions.teacher.open || interactions.teacher.width !== 10) throw new Error("Teacher settings failed.");
 if (interactions.ranges.cursor !== "ew-resize" || interactions.ranges.touchAction !== "none" || interactions.ranges.afterDown !== 7 || interactions.ranges.afterMove !== 11) throw new Error("Range controls are not freely draggable: " + JSON.stringify(interactions.ranges));
 if (interactions.zh.lang !== "zh-Hans" || !interactions.zh.title.includes("几何") || interactions.zh.overflow > 1) throw new Error("Chinese UI failed.");

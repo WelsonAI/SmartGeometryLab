@@ -66,7 +66,7 @@ const ACTIVITIES = {
   shapeDrawer: {
     label: ml("Papan lukis bentuk", "图形绘制板", "Shape drawing board"),
     scope: ml("Tahun 2 · Melukis bentuk 2D", "二年级 · 绘制二维图形", "Year 2 · Drawing 2D shapes"),
-    tip: ml("Sentuh titik grid mengikut urutan, kemudian tutup bentuk.", "依次点击格点，然后闭合图形。", "Tap grid points in order, then close the shape.")
+    tip: ml("Klik satu demi satu atau seret merentasi titik grid; selepas ditutup, sambungkan menjadi model 3D.", "可逐点点击，也可按住拖过格点；闭合后可连接成立体模型。", "Click points one by one or drag across the grid; after closing, connect it into a 3D model.")
   },
   prismLab: {
     label: ml("Makmal prisma", "棱柱实验室", "Prism lab"),
@@ -150,14 +150,14 @@ const GUIDES = {
     ml("Seret model 3D dan padankan setiap nombor.", "拖动对应的 3D 模型，核对各面的编号。", "Drag the matching 3D model and check every number.")
   ],
   shapeDrawer: [
-    ml("Sentuh beberapa titik grid.", "依次点击几个格点。", "Tap several grid points."),
+    ml("Klik titik satu demi satu atau tahan dan seret merentasi titik.", "逐点点击，或按住并拖过多个格点。", "Click points one by one, or hold and drag across them."),
     ml("Tekan Tutup bentuk.", "点击“闭合图形”。", "Press Close shape."),
-    ml("Lihat nombor bucu dan sisi.", "查看顶点和边的编号。", "Read the vertex and side numbers.")
+    ml("Tekan Sambung jadi 3D, kemudian seret model untuk memutarnya.", "点击“连接成立体”，再拖动模型旋转查看。", "Press Connect as 3D, then drag the model to rotate it.")
   ],
   prismLab: [
     ml("Ubah bilangan sisi tapak.", "改变底面的边数。", "Change the base sides."),
-    ml("Ubah kedalaman prisma.", "改变棱柱深度。", "Change the prism depth."),
-    ml("Lihat label tapak dan jumlah sifat.", "查看底面标示和特征总数。", "Read the base labels and property totals.")
+    ml("Seret model 3D untuk melihat depan, belakang, atas dan bawah.", "直接拖动 3D 模型，查看前、后、上、下各面。", "Drag the 3D model to inspect its front, back, top and bottom."),
+    ml("Ubah kedalaman dan lihat dua tapak kekal sama.", "改变棱柱深度，观察两个底面始终相同。", "Change the depth and observe that both bases stay identical.")
   ],
   symmetryLab: [
     ml("Pilih bentuk boleh seret atau mod petak.", "选择可拖动图形或方格模式。", "Choose draggable shapes or grid mode."),
@@ -361,8 +361,8 @@ function metric(label, value, active = false) {
 const factories = {
   shapeExplorer: () => ({ shape: "cube", rotation: 0, property: 0, viewX: -18, viewY: 30, selectedFace: null }),
   netBuilder: () => ({ shape: "cube", net: 0, step: 0, viewX: -18, viewY: 30 }),
-  shapeDrawer: () => ({ points: [], closed: false, corners: 4 }),
-  prismLab: () => ({ sides: 3, depth: 64 }),
+  shapeDrawer: () => ({ points: [], closed: false, corners: 4, solid: false, depth: 58, viewX: -18, viewY: 30 }),
+  prismLab: () => ({ sides: 3, depth: 64, viewX: -18, viewY: 30 }),
   symmetryLab: () => ({ mode: "stamps", cells: ["1,1","2,2","3,1","4,3"], stamp: "star", randomCount: 4, stamps: [{ id: 1, type: "star", x: 105, y: 82 }, { id: 2, type: "circle", x: 176, y: 166 }, { id: 3, type: "triangle", x: 88, y: 238 }] }),
   patternLab: () => ({ seed: ["circle","triangle"], repeats: 3 }),
   angleLab: () => ({ angle: 0, target: state.grade === 6 ? 50 : null }),
@@ -439,9 +439,12 @@ function randomizeCurrent() {
       t.corners = n;
       t.points = polygonPoints(200, 150, randomInt(70, 115), n, randomInt(-110, -70));
       t.closed = true;
+      t.solid = false;
+      t.viewX = -18;
+      t.viewY = 30;
       break;
     }
-    case "prismLab": t.sides = randomInt(3, 8); t.depth = randomInt(35, 90); break;
+    case "prismLab": t.sides = randomInt(3, 8); t.depth = randomInt(35, 90); t.viewX = randomInt(-35, 20); t.viewY = randomInt(-55, 55); break;
     case "symmetryLab": {
       if (t.mode === "grid") {
         t.cells = [];
@@ -652,7 +655,7 @@ function sphereSvgContent(t, property) {
 function solidSvgContent(shape, t, options = {}) {
   const property = options.property ?? 0;
   if (shape.id === "sphere") return sphereSvgContent(t, property);
-  const model = solidModel(shape.id);
+  const model = options.model || solidModel(shape.id);
   const transformed = model.vertices.map(point => rotateSolidPoint(point, t.viewX, t.viewY));
   const projected = transformed.map(projectSolidPoint);
   const allowed = options.visibleFaces ? new Set(options.visibleFaces) : null;
@@ -672,8 +675,11 @@ function solidSvgContent(shape, t, options = {}) {
     const chosen = labelFaces.get(face.id) === face;
     const centre = face.vertices.reduce((sum, vertex) => [sum[0] + projected[vertex][0], sum[1] + projected[vertex][1]], [0,0]).map(value => value / face.vertices.length);
     const selected = options.selectedFace === face.id;
-    return "<g><polygon data-solid-face=\"" + face.id + "\" class=\"solid-face face-" + face.id + (face.curved ? " curved-piece" : "") + (property === 0 ? " feature-active" : "") + (selected ? " selected" : "") + "\" points=\"" + points + "\"/>" +
-      (chosen && (property === 0 || options.alwaysLabels) ? "<text class=\"solid-face-label\" x=\"" + centre[0].toFixed(1) + "\" y=\"" + (centre[1] + 6).toFixed(1) + "\" text-anchor=\"middle\">" + face.id + "</text>" : "") + "</g>";
+    const colourIndex = face.colourIndex || face.id;
+    const label = options.faceLabel ? options.faceLabel(face) : face.id;
+    const labelClass = options.faceLabelClass ? " " + options.faceLabelClass(face) : "";
+    return "<g><polygon data-solid-face=\"" + face.id + "\" class=\"solid-face face-" + colourIndex + (face.curved ? " curved-piece" : "") + (property === 0 ? " feature-active" : "") + (selected ? " selected" : "") + "\" points=\"" + points + "\"/>" +
+      (chosen && (property === 0 || options.alwaysLabels) ? "<text class=\"solid-face-label" + labelClass + "\" x=\"" + centre[0].toFixed(1) + "\" y=\"" + (centre[1] + 6).toFixed(1) + "\" text-anchor=\"middle\">" + label + "</text>" : "") + "</g>";
   }).join("");
   const edgeMarkup = model.edges.filter(edge => visibleVertices.has(edge[0]) && visibleVertices.has(edge[1])).map((edge, index) => {
     const a = projected[edge[0]], b = projected[edge[1]];
@@ -994,47 +1000,173 @@ function renderNetBuilder() {
   bindNetFoldDrag(t);
 }
 
+function drawnSolidModel(points, depth) {
+  const centre = points.reduce((sum, point) => [sum[0] + point[0], sum[1] + point[1]], [0, 0]).map(value => value / points.length);
+  const span = Math.max(80, ...points.map(point => Math.max(Math.abs(point[0] - centre[0]), Math.abs(point[1] - centre[1])))) / 1.05;
+  const halfDepth = .35 + depth / 100 * .72;
+  const ring = points.map(point => [(point[0] - centre[0]) / span, (centre[1] - point[1]) / span]);
+  const count = ring.length;
+  const vertices = ring.map(point => [point[0], point[1], -halfDepth]).concat(ring.map(point => [point[0], point[1], halfDepth]));
+  const faces = [
+    { id: 1, role: "baseA", colourIndex: 2, vertices: Array.from({ length: count }, (_, index) => count - 1 - index) },
+    { id: 2, role: "baseB", colourIndex: 4, vertices: Array.from({ length: count }, (_, index) => count + index) },
+    ...Array.from({ length: count }, (_, index) => {
+      const next = (index + 1) % count;
+      return { id: index + 3, role: "side", sideNumber: index + 1, colourIndex: index % 2 ? 3 : 1, vertices: [index, next, count + next, count + index] };
+    })
+  ];
+  const edges = [];
+  for (let index = 0; index < count; index++) {
+    const next = (index + 1) % count;
+    edges.push([index, next], [count + index, count + next], [index, count + index]);
+  }
+  return { vertices, faces, edges, vertexIndices: Array.from({ length: count * 2 }, (_, index) => index) };
+}
+
 function renderShapeDrawer() {
   const t = state.tool;
+  if (!Number.isFinite(t.depth)) t.depth = 58;
+  if (!Number.isFinite(t.viewX)) t.viewX = -18;
+  if (!Number.isFinite(t.viewY)) t.viewY = 30;
+  if (t.solid && !t.closed) t.solid = false;
+  const sideCount = t.closed ? t.points.length : Math.max(0, t.points.length - 1);
+
+  if (t.solid && t.points.length >= 3) {
+    const model = drawnSolidModel(t.points, t.depth);
+    const solidShape = { id: "drawnSolid" };
+    const options = {
+      model,
+      property: 0,
+      alwaysLabels: true,
+      faceLabel: face => face.role === "baseA"
+        ? loc(ml("Tapak A", "底面 A", "Base A"))
+        : face.role === "baseB"
+          ? loc(ml("Tapak B", "底面 B", "Base B"))
+          : loc(ml("Sisi ", "侧面 ", "Side ")) + face.sideNumber,
+      faceLabelClass: face => "drawn-solid-label " + (face.role === "side" ? "side-face-label" : "base-face-label")
+    };
+    setChallenge(loc(ml("Bentuk telah disambung menjadi 3D", "图形已经连接成立体", "The shape is now connected as a 3D solid")), loc(ml("Seret model untuk melihat dua tapak dan semua permukaan sisi.", "拖动模型，查看两个底面和所有侧面。", "Drag the model to inspect both bases and every side face.")));
+    els.stage.innerHTML = "<div class=\"draw-solid-wrap\">" + solid3dMarkup("drawnSolid3d", solidShape, t, options) + "<div class=\"metric-row\">" + metric(tr("faces"), sideCount + 2) + metric(tr("edges"), sideCount * 3) + metric(tr("vertices"), sideCount * 2) + "</div></div>";
+    els.controls.innerHTML = "<div class=\"range-grid\">" + rangeControl("drawDepth", loc(ml("Kedalaman", "立体深度", "Solid depth")), 25, 100, 1, t.depth) + "</div><div class=\"board-actions\"><button id=\"toggleDrawSolid\" class=\"secondary-button compact\" type=\"button\">▦ " + loc(ml("Kembali ke satah", "回到平面", "Back to plane")) + "</button><button id=\"resetDrawView\" class=\"secondary-button compact\" type=\"button\">⌂ " + loc(ml("Pandangan asal", "恢复视角", "Reset view")) + "</button>" + randomButton() + "</div>";
+    setSummary(sideCount + " " + loc(ml("sisi tapak", "条底边", "base sides")) + " → <strong>" + (sideCount + 2) + " " + tr("faces") + "</strong>");
+    document.querySelector("#drawDepth").addEventListener("input", event => { t.depth = Number(event.target.value); renderTool(); });
+    document.querySelector("#toggleDrawSolid").addEventListener("click", () => { t.solid = false; renderTool(); });
+    document.querySelector("#resetDrawView").addEventListener("click", () => { t.viewX = -18; t.viewY = 30; renderTool(); });
+    document.querySelector("#randomExample").addEventListener("click", randomizeCurrent);
+    bindSolidDrag("drawnSolid3d", solidShape, t, options);
+    return;
+  }
+
   const grid = [];
-  for (let x = 20; x <= 380; x += 40) for (let y = 20; y <= 280; y += 40) grid.push("<circle cx=\"" + x + "\" cy=\"" + y + "\" r=\"3\" fill=\"#c1b18e\"/>");
+  for (let x = 20; x <= 380; x += 40) for (let y = 20; y <= 280; y += 40) grid.push("<circle cx=\"" + x + "\" cy=\"" + y + "\" r=\"4\" fill=\"#c1b18e\"/>");
   const points = t.points.map(point => point.join(",")).join(" ");
   const lines = t.points.length > 1 ? (t.closed ? "<polygon points=\"" + points + "\" fill=\"rgba(255,215,120,.42)\" class=\"measure-line\"/>" : "<polyline points=\"" + points + "\" class=\"measure-line\"/>") : "";
-  const handles = t.points.map((point, index) => "<circle class=\"point-handle\" cx=\"" + point[0] + "\" cy=\"" + point[1] + "\" r=\"8\"/><text x=\"" + (point[0] + 10) + "\" y=\"" + (point[1] - 10) + "\">" + (index + 1) + "</text>").join("");
-  setChallenge(loc(ml("Bina bentuk pada grid", "在格点上构造图形", "Build a shape on the grid")), loc(ml("Setiap sentuhan menambah satu bucu.", "每次点击都会增加一个顶点。", "Every tap adds one vertex.")));
-  els.stage.innerHTML = "<div class=\"draw-wrap\"><svg id=\"drawBoard\" class=\"draw-board\" viewBox=\"0 0 400 300\">" + grid.join("") + lines + handles + "</svg><div class=\"draw-help\">" + metric(tr("corners"), t.points.length) + "<div class=\"formula-strip\">" + (t.closed ? loc(ml("Bentuk tertutup", "闭合图形", "Closed shape")) : loc(ml("Bentuk masih terbuka", "图形尚未闭合", "Shape is still open"))) + "</div></div></div>";
-  els.controls.innerHTML = "<div class=\"board-actions\"><button id=\"undoPoint\" class=\"secondary-button compact\" type=\"button\">↶ " + tr("undo") + "</button><button id=\"closeDraw\" class=\"primary-button compact\" type=\"button\">◇ " + tr("closeShape") + "</button><button id=\"clearDraw\" class=\"secondary-button compact\" type=\"button\">↻ " + tr("clear") + "</button>" + randomButton() + "</div>";
-  const sideCount = t.closed ? t.points.length : Math.max(0, t.points.length - 1);
-  setSummary(loc(ml("Bilangan sisi yang kelihatan", "目前可见的边数", "Visible sides")) + ": <strong>" + sideCount + "</strong>");
+  const edgeTotal = t.closed ? t.points.length : Math.max(0, t.points.length - 1);
+  const edgeLabels = Array.from({ length: edgeTotal }, (_, index) => {
+    const a = t.points[index];
+    const b = t.points[(index + 1) % t.points.length];
+    return "<text class=\"draw-edge-label\" x=\"" + ((a[0] + b[0]) / 2) + "\" y=\"" + ((a[1] + b[1]) / 2 - 8) + "\" text-anchor=\"middle\">" + (index + 1) + "</text>";
+  }).join("");
+  const handles = t.points.map((point, index) => "<circle class=\"point-handle\" cx=\"" + point[0] + "\" cy=\"" + point[1] + "\" r=\"8\"/><text class=\"draw-vertex-label\" x=\"" + (point[0] + 11) + "\" y=\"" + (point[1] - 10) + "\">" + (index + 1) + "</text>").join("");
+  setChallenge(loc(ml("Bina bentuk pada grid", "在格点上构造图形", "Build a shape on the grid")), loc(ml("Klik titik atau tahan dan seret melalui beberapa titik.", "可逐点点击，也可按住并拖过多个格点。", "Click points, or hold and drag across several grid points.")));
+  els.stage.innerHTML = "<div class=\"draw-wrap\"><svg id=\"drawBoard\" class=\"draw-board\" viewBox=\"0 0 400 300\">" + grid.join("") + lines + edgeLabels + handles + "</svg><div class=\"draw-help\">" + metric(tr("corners"), t.points.length) + "<div class=\"formula-strip\">" + (t.closed ? loc(ml("Bentuk tertutup · sedia untuk 3D", "图形已闭合 · 可以连接成立体", "Closed shape · ready for 3D")) : loc(ml("Bentuk masih terbuka", "图形尚未闭合", "Shape is still open"))) + "</div></div></div>";
+  els.controls.innerHTML = "<div class=\"board-actions\"><button id=\"undoPoint\" class=\"secondary-button compact\" type=\"button\">↶ " + tr("undo") + "</button><button id=\"closeDraw\" class=\"primary-button compact\" type=\"button\" " + (t.points.length < 3 ? "disabled" : "") + ">◇ " + tr("closeShape") + "</button><button id=\"toggleDrawSolid\" class=\"primary-button compact\" type=\"button\" " + (!t.closed ? "disabled" : "") + ">⬡ " + loc(ml("Sambung jadi 3D", "连接成立体", "Connect as 3D")) + "</button><button id=\"clearDraw\" class=\"secondary-button compact\" type=\"button\">↻ " + tr("clear") + "</button>" + randomButton() + "</div>";
+  setSummary(loc(ml("Bilangan sisi yang kelihatan", "目前可见的边数", "Visible sides")) + ": <strong>" + sideCount + "</strong> · " + loc(ml("Klik atau seret melalui titik grid", "可点击或拖过格点来画", "Click or drag across grid points")));
   const board = document.querySelector("#drawBoard");
-  board.addEventListener("click", event => {
+  board.addEventListener("pointerdown", startEvent => {
     if (t.closed) return;
+    startEvent.preventDefault();
     const rect = board.getBoundingClientRect();
-    const x = clamp(Math.round(((event.clientX - rect.left) / rect.width * 400 - 20) / 40) * 40 + 20, 20, 380);
-    const y = clamp(Math.round(((event.clientY - rect.top) / rect.height * 300 - 20) / 40) * 40 + 20, 20, 280);
-    if (!t.points.some(point => point[0] === x && point[1] === y)) t.points.push([x, y]);
-    renderTool();
+    let drawing = true;
+    const addPoint = (event, requireNear) => {
+      const rawX = (event.clientX - rect.left) / rect.width * 400;
+      const rawY = (event.clientY - rect.top) / rect.height * 300;
+      const x = clamp(Math.round((rawX - 20) / 40) * 40 + 20, 20, 380);
+      const y = clamp(Math.round((rawY - 20) / 40) * 40 + 20, 20, 280);
+      if (requireNear && Math.hypot(rawX - x, rawY - y) > 18) return;
+      const existing = t.points.findIndex(point => point[0] === x && point[1] === y);
+      if (existing === 0 && t.points.length >= 3) {
+        t.closed = true;
+        beep("done");
+        renderTool();
+        return;
+      }
+      if (existing !== -1) return;
+      t.points.push([x, y]);
+      t.solid = false;
+      renderTool();
+    };
+    addPoint(startEvent, false);
+    const move = event => { if (drawing && !t.closed) { event.preventDefault(); addPoint(event, true); } };
+    const stop = () => {
+      drawing = false;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    window.addEventListener("pointermove", move, { passive: false });
+    window.addEventListener("pointerup", stop, { once: true });
+    window.addEventListener("pointercancel", stop, { once: true });
   });
-  document.querySelector("#undoPoint").addEventListener("click", () => { t.closed = false; t.points.pop(); renderTool(); });
+  document.querySelector("#undoPoint").addEventListener("click", () => { t.solid = false; t.closed = false; t.points.pop(); renderTool(); });
   document.querySelector("#closeDraw").addEventListener("click", () => { if (t.points.length >= 3) { t.closed = true; beep("done"); } renderTool(); });
-  document.querySelector("#clearDraw").addEventListener("click", () => { t.points = []; t.closed = false; renderTool(); });
+  document.querySelector("#toggleDrawSolid").addEventListener("click", () => { if (t.closed) { t.solid = true; renderTool(); } });
+  document.querySelector("#clearDraw").addEventListener("click", () => { t.points = []; t.closed = false; t.solid = false; renderTool(); });
   document.querySelector("#randomExample").addEventListener("click", randomizeCurrent);
+}
+
+function prismSolidModel(sides, depth) {
+  const radius = sides >= 7 ? 1 : 1.12;
+  const halfDepth = .42 + depth / 100 * .78;
+  const ring = Array.from({ length: sides }, (_, index) => {
+    const angle = -Math.PI / 2 + index * Math.PI * 2 / sides;
+    return [Math.cos(angle) * radius, Math.sin(angle) * radius];
+  });
+  const vertices = ring.map(point => [point[0], point[1], -halfDepth]).concat(ring.map(point => [point[0], point[1], halfDepth]));
+  const front = Array.from({ length: sides }, (_, index) => sides - 1 - index);
+  const back = Array.from({ length: sides }, (_, index) => sides + index);
+  const faces = [
+    { id: 1, role: "baseA", colourIndex: 2, vertices: front },
+    { id: 2, role: "baseB", colourIndex: 4, vertices: back },
+    ...Array.from({ length: sides }, (_, index) => {
+      const next = (index + 1) % sides;
+      return { id: index + 3, role: "side", sideNumber: index + 1, colourIndex: index % 2 ? 3 : 1, vertices: [index, next, sides + next, sides + index] };
+    })
+  ];
+  const edges = [];
+  for (let index = 0; index < sides; index++) {
+    const next = (index + 1) % sides;
+    edges.push([index, next], [sides + index, sides + next], [index, sides + index]);
+  }
+  return { vertices, faces, edges, vertexIndices: Array.from({ length: sides * 2 }, (_, index) => index) };
 }
 
 function renderPrismLab() {
   const t = state.tool;
-  const front = polygonPoints(190, 145, 92, t.sides);
-  const dx = t.depth;
-  const dy = -Math.round(t.depth * .42);
-  const back = front.map(point => [point[0] + dx, point[1] + dy]);
-  const connectors = front.map((point, index) => "<line x1=\"" + point[0] + "\" y1=\"" + point[1] + "\" x2=\"" + back[index][0] + "\" y2=\"" + back[index][1] + "\" class=\"guide-line\"/>").join("");
-  setChallenge(t.sides + " " + tr("sides"), loc(ml("Dua tapak yang sama disambungkan oleh permukaan sisi.", "两个相同的底面由侧面连接。", "Two matching bases are connected by side faces.")));
-  els.stage.innerHTML = "<div class=\"prism-wrap\"><svg class=\"geometry-svg\" viewBox=\"0 0 520 300\"><polygon class=\"shape-fill purple\" points=\"" + pointsAttr(back) + "\"/>" + connectors + "<polygon class=\"shape-fill alt\" points=\"" + pointsAttr(front) + "\"/><text class=\"diagram-label\" x=\"" + (190 + dx) + "\" y=\"" + (145 + dy) + "\" text-anchor=\"middle\">" + loc(ml("Tapak B", "底面 B", "Base B")) + " · " + t.sides + " " + tr("sides") + "</text><text class=\"diagram-label accent\" x=\"190\" y=\"150\" text-anchor=\"middle\">" + loc(ml("Tapak A", "底面 A", "Base A")) + " · " + t.sides + " " + tr("sides") + "</text><text class=\"diagram-label\" x=\"" + (315 + dx/2) + "\" y=\"" + (245 + dy/2) + "\" text-anchor=\"middle\">" + loc(ml("kedalaman", "深度", "depth")) + " = " + t.depth + "</text></svg><div class=\"metric-row\">" + metric(tr("faces"), t.sides + 2) + metric(tr("edges"), t.sides * 3) + metric(tr("vertices"), t.sides * 2) + "</div></div>";
-  els.controls.innerHTML = "<div class=\"range-grid\">" + rangeControl("prismSides", tr("sides"), 3, 8, 1, t.sides) + rangeControl("prismDepth", loc(ml("Kedalaman", "深度", "Depth")), 25, 100, 1, t.depth) + "</div><div class=\"board-actions\">" + randomButton() + "</div>";
-  setSummary((t.sides + 2) + " = 2 " + loc(ml("tapak", "个底面", "bases")) + " + " + t.sides + " " + loc(ml("permukaan sisi", "个侧面", "side faces")));
+  if (!Number.isFinite(t.viewX)) t.viewX = -18;
+  if (!Number.isFinite(t.viewY)) t.viewY = 30;
+  const model = prismSolidModel(t.sides, t.depth);
+  const shape = { id: "prism" };
+  const options = {
+    model,
+    property: 0,
+    alwaysLabels: true,
+    faceLabel: face => face.role === "baseA"
+      ? loc(ml("Tapak A", "底面 A", "Base A"))
+      : face.role === "baseB"
+        ? loc(ml("Tapak B", "底面 B", "Base B"))
+        : loc(ml("Sisi ", "侧面 ", "Side ")) + face.sideNumber,
+    faceLabelClass: face => "prism-face-label " + (face.role === "side" ? "side-face-label" : "base-face-label")
+  };
+  setChallenge(t.sides + " " + tr("sides"), loc(ml("Seret model 3D. Dua tapak yang sama sentiasa disambungkan oleh permukaan sisi.", "直接拖动 3D 模型；两个相同的底面始终由侧面连接。", "Drag the 3D model. Two identical bases always stay connected by side faces.")));
+  els.stage.innerHTML = "<div class=\"prism-wrap prism-3d-wrap\">" + solid3dMarkup("prismSolid3d", shape, t, options) + "<div class=\"metric-row\">" + metric(tr("faces"), t.sides + 2) + metric(tr("edges"), t.sides * 3) + metric(tr("vertices"), t.sides * 2) + "</div></div>";
+  els.controls.innerHTML = "<div class=\"range-grid\">" + rangeControl("prismSides", tr("sides"), 3, 8, 1, t.sides) + rangeControl("prismDepth", loc(ml("Kedalaman", "深度", "Depth")), 25, 100, 1, t.depth) + "</div><div class=\"board-actions\"><button id=\"resetPrismView\" class=\"secondary-button compact\" type=\"button\">⌂ " + loc(ml("Pandangan asal", "恢复初始视角", "Reset view")) + "</button>" + randomButton() + "</div>";
+  setSummary((t.sides + 2) + " = 2 " + loc(ml("tapak", "个底面", "bases")) + " + " + t.sides + " " + loc(ml("permukaan sisi", "个侧面", "side faces")) + " · " + loc(ml("Seret model untuk menyemak semua muka.", "拖动模型查看所有面。", "Drag the model to inspect every face.")));
   document.querySelector("#prismSides").addEventListener("input", event => { t.sides = Number(event.target.value); renderTool(); });
   document.querySelector("#prismDepth").addEventListener("input", event => { t.depth = Number(event.target.value); renderTool(); });
+  document.querySelector("#resetPrismView").addEventListener("click", () => { t.viewX = -18; t.viewY = 30; renderTool(); });
   document.querySelector("#randomExample").addEventListener("click", randomizeCurrent);
+  bindSolidDrag("prismSolid3d", shape, t, options);
 }
 
 function symmetryStampMarkup(item, mirrored = false) {
@@ -1408,7 +1540,7 @@ function renderAreaLab() {
   const isSquare = t.shape === "square";
   if (isSquare) t.height = t.width;
   const area = isTriangle ? t.width * t.height / 2 : t.width * t.height;
-  const unit = 25;
+  const unit = Math.min(25, 330 / t.width, 210 / t.height);
   const w = t.width * unit;
   const h = t.height * unit;
   const x = (420 - w) / 2;
@@ -1417,10 +1549,15 @@ function renderAreaLab() {
     ? "<polygon points=\"" + x + "," + (y + h) + " " + (x + w) + "," + (y + h) + " " + x + "," + y + "\" fill=\"rgba(19,139,117,.55)\" stroke=\"#075f4e\" stroke-width=\"4\"/><line x1=\"" + x + "\" y1=\"" + y + "\" x2=\"" + x + "\" y2=\"" + (y + h) + "\" stroke=\"#ba3f45\" stroke-width=\"4\"/><text class=\"diagram-label accent\" x=\"" + (x + w/2) + "\" y=\"" + (y + h - 10) + "\" text-anchor=\"middle\">" + loc(ml("tapak", "底", "base")) + " = " + t.width + " cm</text><text class=\"diagram-label accent\" x=\"" + (x + 10) + "\" y=\"" + (y + h/2) + "\" transform=\"rotate(-90 " + (x + 10) + " " + (y + h/2) + ")\" text-anchor=\"middle\">" + loc(ml("tinggi", "高", "height")) + " = " + t.height + " cm</text>"
     : "<rect x=\"" + x + "\" y=\"" + y + "\" width=\"" + w + "\" height=\"" + h + "\" fill=\"rgba(255,189,63,.58)\" stroke=\"#6d4a1e\" stroke-width=\"4\"/><text class=\"diagram-label\" x=\"" + (x + w/2) + "\" y=\"" + (y + h - 10) + "\" text-anchor=\"middle\">" + tr("width") + " = " + t.width + " cm</text><text class=\"diagram-label\" x=\"" + (x + 12) + "\" y=\"" + (y + h/2) + "\" transform=\"rotate(-90 " + (x + 12) + " " + (y + h/2) + ")\" text-anchor=\"middle\">" + tr("height") + " = " + t.height + " cm</text>";
   setChallenge(tr("area") + ": " + area + " cm²", isTriangle ? loc(ml("Segi tiga ialah separuh daripada segi empat dengan tapak dan tinggi yang sama.", "三角形是相同底和高的长方形的一半。", "A triangle is half a rectangle with the same base and height.")) : loc(ml("Kira petak satu sentimeter persegi.", "数一数每个一平方厘米的方格。", "Count the one-square-centimetre cells.")));
-  els.stage.innerHTML = "<div class=\"measure-board\"><svg class=\"geometry-svg\" viewBox=\"0 0 420 260\"><defs><pattern id=\"gridPattern\" width=\"25\" height=\"25\" patternUnits=\"userSpaceOnUse\"><path d=\"M25 0H0V25\" fill=\"none\" stroke=\"#b9d5d0\" stroke-width=\"1\"/></pattern></defs><rect x=\"0\" y=\"0\" width=\"420\" height=\"260\" fill=\"url(#gridPattern)\"/>" + shape + "</svg><div class=\"formula-card\"><span>" + tr("area") + "</span><strong>" + area + " cm²</strong><span>" + (isTriangle ? "½ × " : "") + t.width + " × " + t.height + "</span></div></div>";
+  els.stage.innerHTML = "<div class=\"measure-board\"><svg class=\"geometry-svg area-board-svg\" viewBox=\"0 0 420 260\"><defs><pattern id=\"gridPattern\" width=\"" + unit.toFixed(2) + "\" height=\"" + unit.toFixed(2) + "\" patternUnits=\"userSpaceOnUse\"><path d=\"M" + unit.toFixed(2) + " 0H0V" + unit.toFixed(2) + "\" fill=\"none\" stroke=\"#b9d5d0\" stroke-width=\"1\"/></pattern></defs><rect x=\"0\" y=\"0\" width=\"420\" height=\"260\" fill=\"url(#gridPattern)\"/>" + shape + "</svg><div class=\"formula-card\"><span>" + tr("area") + "</span><strong>" + area + " cm²</strong><span>" + (isTriangle ? "½ × " : "") + t.width + " × " + t.height + "</span></div></div>";
   els.controls.innerHTML = "<div class=\"choice-row\"><button class=\"choice-chip" + (t.shape === "rectangle" ? " active" : "") + "\" data-area-shape=\"rectangle\" type=\"button\">▭ " + loc(ml("Segi empat tepat", "长方形", "Rectangle")) + "</button><button class=\"choice-chip" + (t.shape === "square" ? " active" : "") + "\" data-area-shape=\"square\" type=\"button\">□ " + loc(ml("Segi empat sama", "正方形", "Square")) + "</button><button class=\"choice-chip" + (t.shape === "triangle" ? " active" : "") + "\" data-area-shape=\"triangle\" type=\"button\">△ " + loc(ml("Segi tiga", "三角形", "Triangle")) + "</button></div><div class=\"range-grid\" style=\"margin-top:10px\">" + rangeControl("areaWidth", isTriangle ? loc(ml("Tapak", "底", "Base")) : tr("width"), 2, 12, 1, t.width, " cm") + (isSquare ? "" : rangeControl("areaHeight", tr("height"), 2, 8, 1, t.height, " cm")) + "</div><div class=\"board-actions\">" + randomButton() + "</div>";
   setSummary((isTriangle ? "½ × " : "") + t.width + " × " + t.height + " = <strong>" + area + " cm²</strong>");
-  document.querySelectorAll("[data-area-shape]").forEach(button => button.addEventListener("click", () => { t.shape = button.dataset.areaShape; if (t.shape === "square") t.height = t.width; renderTool(); }));
+  document.querySelectorAll("[data-area-shape]").forEach(button => button.addEventListener("click", () => {
+    t.shape = button.dataset.areaShape;
+    if (t.shape === "square") t.height = t.width;
+    else t.height = clamp(t.height, 2, 8);
+    renderTool();
+  }));
   document.querySelector("#areaWidth").addEventListener("input", event => { t.width = Number(event.target.value); if (t.shape === "square") t.height = t.width; renderTool(); });
   const heightInput = document.querySelector("#areaHeight"); if (heightInput) heightInput.addEventListener("input", event => { t.height = Number(event.target.value); renderTool(); });
   document.querySelector("#randomExample").addEventListener("click", randomizeCurrent);
@@ -1432,7 +1569,7 @@ function isoCube(x, y, z, size, ox, oy, offsetY = 0) {
   const top = [[sx,sy],[sx+size,sy+size*.5],[sx,sy+size],[sx-size,sy+size*.5]];
   const left = [[sx-size,sy+size*.5],[sx,sy+size],[sx,sy+size*2],[sx-size,sy+size*1.5]];
   const right = [[sx+size,sy+size*.5],[sx,sy+size],[sx,sy+size*2],[sx+size,sy+size*1.5]];
-  return "<polygon class=\"iso-left\" points=\"" + pointsAttr(left) + "\"/><polygon class=\"iso-right\" points=\"" + pointsAttr(right) + "\"/><polygon class=\"iso-top\" points=\"" + pointsAttr(top) + "\"/>";
+  return "<g class=\"iso-cube\" data-cube-x=\"" + x + "\" data-cube-y=\"" + y + "\" data-cube-z=\"" + z + "\"><polygon class=\"iso-left\" points=\"" + pointsAttr(left) + "\"/><polygon class=\"iso-right\" points=\"" + pointsAttr(right) + "\"/><polygon class=\"iso-top\" points=\"" + pointsAttr(top) + "\"/></g>";
 }
 
 function renderVolumeLab() {
@@ -1440,8 +1577,10 @@ function renderVolumeLab() {
   const size = 30;
   const originX = 320;
   const originY = 115;
-  const cubes = [];
-  for (let z = 0; z < t.height; z++) for (let y = t.width - 1; y >= 0; y--) for (let x = 0; x < t.length; x++) cubes.push(isoCube(x, y, z, size, originX, originY));
+  const cubePositions = [];
+  for (let z = 0; z < t.height; z++) for (let y = 0; y < t.width; y++) for (let x = 0; x < t.length; x++) cubePositions.push({ x, y, z });
+  cubePositions.sort((a, b) => a.z - b.z || (a.x + a.y) - (b.x + b.y) || a.x - b.x);
+  const cubes = cubePositions.map(cube => isoCube(cube.x, cube.y, cube.z, size, originX, originY));
   const volume = t.length * t.width * t.height;
   const project = (x, y, z) => [originX + (x - y) * size, originY + (x + y) * size * .5 - z * size];
   const lowerCorner = (x, y) => {
@@ -1497,7 +1636,7 @@ function renderPolygonLab() {
 
 function renderCompositeArea() {
   const t = state.tool;
-  t.cutWidth = Math.min(t.cutWidth, t.width - 2);
+  t.cutWidth = Math.min(t.cutWidth, t.width - 1);
   t.cutHeight = Math.min(t.cutHeight, t.height - 1);
   const scale = Math.min(28, 260 / t.width, 210 / t.height);
   const w = t.width * scale, h = t.height * scale, cw = t.cutWidth * scale, ch = t.cutHeight * scale;
@@ -1507,7 +1646,7 @@ function renderCompositeArea() {
   const perimeter = 2 * (t.width + t.height);
   setChallenge(tr("area") + ": " + area + " cm²", loc(ml("Luas besar ditolak luas bahagian yang dipotong.", "大长方形面积减去切除部分面积。", "Subtract the cut-out area from the large rectangle.")));
   els.stage.innerHTML = "<div class=\"measure-board\"><svg class=\"geometry-svg\" viewBox=\"0 0 440 280\"><path class=\"shape-fill\" d=\"" + path + "\"/><rect x=\"" + (x + w - cw) + "\" y=\"" + y + "\" width=\"" + cw + "\" height=\"" + ch + "\" fill=\"rgba(186,63,69,.12)\" stroke=\"#ba3f45\" stroke-width=\"3\" stroke-dasharray=\"7 5\"/><text class=\"diagram-label\" x=\"220\" y=\"" + (y + h + 24) + "\" text-anchor=\"middle\">" + tr("width") + " = " + t.width + " cm</text><text class=\"diagram-label\" x=\"" + (x - 25) + "\" y=\"" + (y + h/2) + "\" text-anchor=\"middle\" transform=\"rotate(-90 " + (x - 25) + " " + (y + h/2) + ")\">" + tr("height") + " = " + t.height + " cm</text><text class=\"diagram-label accent\" x=\"" + (x + w - cw/2) + "\" y=\"" + (y + Math.max(18, ch/2)) + "\" text-anchor=\"middle\">" + loc(ml("potong", "切除", "cut")) + " " + t.cutWidth + " × " + t.cutHeight + " cm</text></svg><div class=\"formula-card\"><span>" + tr("area") + "</span><strong>" + area + " cm²</strong><span>(" + t.width + " × " + t.height + ") − (" + t.cutWidth + " × " + t.cutHeight + ")</span><span>" + tr("perimeter") + ": <b>" + perimeter + " cm</b></span></div></div>";
-  els.controls.innerHTML = "<div class=\"range-grid\">" + rangeControl("compWidth", loc(ml("Lebar besar", "大图形宽", "Outer width")), 6, 12, 1, t.width, " cm") + rangeControl("compHeight", loc(ml("Tinggi besar", "大图形高", "Outer height")), 4, 9, 1, t.height, " cm") + rangeControl("cutWidth", loc(ml("Lebar potongan", "切除宽", "Cut-out width")), 1, Math.max(1,t.width-2), 1, t.cutWidth, " cm") + rangeControl("cutHeight", loc(ml("Tinggi potongan", "切除高", "Cut-out height")), 1, Math.max(1,t.height-1), 1, t.cutHeight, " cm") + "</div><div class=\"board-actions\">" + randomButton() + "</div>";
+  els.controls.innerHTML = "<div class=\"range-grid\">" + rangeControl("compWidth", loc(ml("Lebar besar", "大图形宽", "Outer width")), 6, 12, 1, t.width, " cm") + rangeControl("compHeight", loc(ml("Tinggi besar", "大图形高", "Outer height")), 4, 9, 1, t.height, " cm") + rangeControl("cutWidth", loc(ml("Lebar potongan", "切除宽", "Cut-out width")), 1, Math.max(1,t.width-1), 1, t.cutWidth, " cm") + rangeControl("cutHeight", loc(ml("Tinggi potongan", "切除高", "Cut-out height")), 1, Math.max(1,t.height-1), 1, t.cutHeight, " cm") + "</div><div class=\"board-actions\">" + randomButton() + "</div>";
   setSummary(t.width + " × " + t.height + " − " + t.cutWidth + " × " + t.cutHeight + " = <strong>" + area + " cm²</strong>");
   [["#compWidth","width"],["#compHeight","height"],["#cutWidth","cutWidth"],["#cutHeight","cutHeight"]].forEach(item => document.querySelector(item[0]).addEventListener("input", event => { t[item[1]] = Number(event.target.value); renderTool(); }));
   document.querySelector("#randomExample").addEventListener("click", randomizeCurrent);
@@ -1630,7 +1769,7 @@ function teacherConfiguration() {
     case "areaLab": return [field("width",tr("width"),2,12),field("height",tr("height"),2,8)];
     case "volumeLab": return [field("length",tr("length"),1,6),field("width",tr("width"),1,5),field("height",tr("height"),1,4)];
     case "polygonLab": return [field("sides",tr("sides"),3,8),field("rotation",loc(ml("Putaran", "旋转", "Rotation")),-30,30)];
-    case "compositeArea": return [field("width",loc(ml("Lebar besar", "大图形宽", "Outer width")),6,12),field("height",loc(ml("Tinggi besar", "大图形高", "Outer height")),4,9),field("cutWidth",loc(ml("Lebar potongan", "切除宽", "Cut-out width")),1,10),field("cutHeight",loc(ml("Tinggi potongan", "切除高", "Cut-out height")),1,8)];
+    case "compositeArea": return [field("width",loc(ml("Lebar besar", "大图形宽", "Outer width")),6,12),field("height",loc(ml("Tinggi besar", "大图形高", "Outer height")),4,9),field("cutWidth",loc(ml("Lebar potongan", "切除宽", "Cut-out width")),1,Math.max(1,t.width-1)),field("cutHeight",loc(ml("Tinggi potongan", "切除高", "Cut-out height")),1,Math.max(1,t.height-1))];
     case "compositeVolume": return [field("l1","A · "+tr("length"),2,6),field("w1","A · "+tr("width"),2,5),field("h1","A · "+tr("height"),1,4),field("l2","B · "+tr("length"),1,6),field("w2","B · "+tr("width"),1,5),field("h2","B · "+tr("height"),1,4)];
     case "circleLab": return [field("radius",tr("radius"),35,115),field("draw",loc(ml("Putaran jangka", "圆规旋转", "Compass turn")),0,360,1)];
     default: return [];
@@ -1661,10 +1800,13 @@ function applyTeacherSettings() {
     const n = state.tool.corners;
     state.tool.points = polygonPoints(200, 150, 105, n);
     state.tool.closed = true;
+    state.tool.solid = false;
+    state.tool.viewX = -18;
+    state.tool.viewY = 30;
   }
   if (state.activity === "symmetryLab") randomizeCurrent();
   if (state.activity === "compositeArea") {
-    state.tool.cutWidth = Math.min(state.tool.cutWidth, state.tool.width - 2);
+    state.tool.cutWidth = Math.min(state.tool.cutWidth, state.tool.width - 1);
     state.tool.cutHeight = Math.min(state.tool.cutHeight, state.tool.height - 1);
   }
   if (state.activity === "compositeVolume") {

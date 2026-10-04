@@ -15,10 +15,14 @@ This is a classroom tool, not a question-and-answer exercise site. Learners move
 - Values and face numbers labelled directly on diagrams
 - Angle and rotation tools begin at 0°; angle rays support 1° adjustment
 - Solid models can be dragged directly in true 3D; numbered faces, colour-coded numbered edges and numbered vertices remain identifiable while rotating
+- The point-grid drawing board accepts individual clicks or a continuous drag across grid points, then extrudes any closed outline into a draggable 3D solid
+- The Year 3 prism lab uses a draggable 3D model whose base sides and depth can be changed independently
 - Cube, cuboid, pyramid and cylinder nets are available; polygonal nets keep every face connected while numbered faces fold along their shared edges
 - Symmetry offers draggable everyday shapes with a live mirror as well as the optional square-grid model
 - Triangle perimeter diagrams physically reshape when any side length changes
 - Unit-block length, width and height guides sit beside the matching rows, columns and layers
+- Maximum-size area shapes scale to stay inside the board; unit-block layers use stable back-to-front drawing order
+- Composite cut-outs may leave a one-centimetre strip, including an 11 cm cut from a 12 cm outer width
 - Lines and the compass pencil can be dragged directly on their diagrams
 - Every range control remains continuously draggable while its diagram updates
 - Responsive desktop, tablet and mobile layout
@@ -43,11 +47,13 @@ tests/smoke.mjs checks:
 
 - all 15 distinct tools and their Year 2–6 navigation
 - random examples and direct manipulation of solids, lines, rays, compass arms and sliders
+- click-or-drag point drawing, closed-outline 3D extrusion and the draggable Year 3 prism model
 - 0° defaults, 1° protractor adjustment and continuous angle dragging
 - connected step-by-step cube, cuboid and pyramid folding into draggable 3D solids
 - direct numbered labels on 2D sides and corners, 3D faces, edges and vertices
 - draggable stamp symmetry and the square-grid alternative
-- triangle reshaping, unit-block dimension guides and full-sphere surface grids
+- triangle reshaping, maximum-size area containment, correctly layered unit blocks and full-sphere surface grids
+- the 11 cm composite cut-out boundary case
 - compass needle/pencil alignment and a traced circle that ends at the draggable pencil tip
 - centred symmetry axes, visible perimeter labels, and line, area, volume, polygon and circle interactions
 - contextual teacher settings
